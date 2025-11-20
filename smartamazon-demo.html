@@ -307,13 +307,60 @@
         </div>
 
         <div class="filter-bar">
-            <strong>Filters:</strong>
-            <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
-            <button class="filter-btn" onclick="filterProducts('no-sponsored')">Hide Sponsored</button>
-            <button class="filter-btn" onclick="filterProducts('prime')">Prime Only</button>
-            <button class="filter-btn" onclick="filterProducts('best-value')">Best Value</button>
+            <strong>Quick Filters:</strong>
+            <button class="filter-btn active" id="btn-all" onclick="filterProducts('all')">All Products</button>
+            <button class="filter-btn" id="btn-no-sponsored" onclick="filterProducts('no-sponsored')">Hide Sponsored</button>
+            <button class="filter-btn" id="btn-prime" onclick="filterProducts('prime')">Prime Only</button>
+            <button class="filter-btn" id="btn-best-value" onclick="filterProducts('best-value')">Best Value</button>
             <button class="filter-btn" onclick="sortProducts('unit-price')">Sort by $/oz</button>
             <button class="filter-btn" onclick="sortProducts('discount')">Sort by Discount</button>
+        </div>
+
+        <!-- Advanced Toggle Controls -->
+        <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: #667eea; margin-bottom: 15px;">🎛️ Advanced Toggles - Show/Hide Products</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                <!-- Toggle for Sponsored -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-sponsored" checked onchange="applyToggles()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-weight: 600;">Show Sponsored Products</span>
+                </label>
+
+                <!-- Toggle for Non-Prime -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-non-prime" checked onchange="applyToggles()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-weight: 600;">Show Non-Prime Products</span>
+                </label>
+
+                <!-- Toggle for Low Ratings -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-low-rating" checked onchange="applyToggles()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-weight: 600;">Show Low Ratings (&lt;4.5)</span>
+                </label>
+
+                <!-- Toggle for High Price -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-high-price" checked onchange="applyToggles()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-weight: 600;">Show Expensive ($50+)</span>
+                </label>
+
+                <!-- Toggle for Vegan/Plant Based -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-vegan" checked onchange="applyToggles()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-weight: 600;">Show Vegan/Plant Products</span>
+                </label>
+
+                <!-- Toggle for Subscribe & Save -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="toggle-subscribe" checked onchange="applyToggles()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-weight: 600;">Only Subscribe & Save 10%+</span>
+                </label>
+            </div>
+            <div style="margin-top: 15px; text-align: center;">
+                <button onclick="resetToggles()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    Reset All Toggles
+                </button>
+            </div>
         </div>
 
         <div class="products-grid" id="products-container">
@@ -655,6 +702,76 @@
             }
 
             renderProducts(sorted);
+        }
+
+        // Advanced Toggle Functions
+        function applyToggles() {
+            const showSponsored = document.getElementById('toggle-sponsored').checked;
+            const showNonPrime = document.getElementById('toggle-non-prime').checked;
+            const showLowRating = document.getElementById('toggle-low-rating').checked;
+            const showHighPrice = document.getElementById('toggle-high-price').checked;
+            const showVegan = document.getElementById('toggle-vegan').checked;
+            const requireSubscribe = document.getElementById('toggle-subscribe').checked;
+
+            let filtered = mockProducts.filter(product => {
+                // Apply search filter first
+                if (currentSearchTerm) {
+                    const titleMatch = product.title.toLowerCase().includes(currentSearchTerm);
+                    const brandMatch = product.brand.toLowerCase().includes(currentSearchTerm);
+                    if (!titleMatch && !brandMatch) return false;
+                }
+
+                // Sponsored toggle
+                if (!showSponsored && product.isSponsored) return false;
+
+                // Non-Prime toggle
+                if (!showNonPrime && !product.isPrime) return false;
+
+                // Low rating toggle
+                if (!showLowRating && product.rating < 4.5) return false;
+
+                // High price toggle
+                if (!showHighPrice && product.currentPrice >= 50) return false;
+
+                // Vegan toggle (check if title contains "vegan" or "plant")
+                const isVegan = product.title.toLowerCase().includes('vegan') ||
+                               product.title.toLowerCase().includes('plant');
+                if (!showVegan && isVegan) return false;
+
+                // Subscribe & Save toggle
+                if (requireSubscribe && product.subscribeSave < 10) return false;
+
+                return true;
+            });
+
+            currentProducts = filtered;
+            renderProducts(filtered);
+
+            console.log(`Toggles applied: ${filtered.length}/${mockProducts.length} products shown`);
+        }
+
+        function resetToggles() {
+            // Check all toggles
+            document.getElementById('toggle-sponsored').checked = true;
+            document.getElementById('toggle-non-prime').checked = true;
+            document.getElementById('toggle-low-rating').checked = true;
+            document.getElementById('toggle-high-price').checked = true;
+            document.getElementById('toggle-vegan').checked = true;
+            document.getElementById('toggle-subscribe').checked = false;
+
+            // Clear search
+            document.getElementById('search-input').value = '';
+            currentSearchTerm = '';
+
+            // Reset filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-all').classList.add('active');
+
+            // Show all products
+            currentProducts = [...mockProducts];
+            renderProducts(mockProducts);
+
+            console.log('All toggles reset - showing all products');
         }
 
         // Unit Price Calculator
