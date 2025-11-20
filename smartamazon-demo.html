@@ -262,6 +262,17 @@
         </header>
 
         <div class="filter-bar">
+            <strong>Search:</strong>
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Search products by name, brand..."
+                style="padding: 10px 15px; border: 2px solid #667eea; border-radius: 6px; font-size: 1rem; flex: 1; min-width: 250px;"
+                oninput="searchProducts(this.value)"
+            />
+        </div>
+
+        <div class="filter-bar">
             <strong>Filters:</strong>
             <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
             <button class="filter-btn" onclick="filterProducts('no-sponsored')">Hide Sponsored</button>
@@ -492,6 +503,24 @@
         ];
 
         let currentProducts = [...mockProducts];
+        let currentSearchTerm = '';
+
+        function searchProducts(searchTerm) {
+            currentSearchTerm = searchTerm.toLowerCase().trim();
+
+            let filtered = mockProducts.filter(product => {
+                const titleMatch = product.title.toLowerCase().includes(currentSearchTerm);
+                const brandMatch = product.brand.toLowerCase().includes(currentSearchTerm);
+                return titleMatch || brandMatch;
+            });
+
+            currentProducts = filtered;
+            renderProducts(filtered);
+
+            // Update stats
+            const matchCount = filtered.length;
+            console.log(`Search: "${searchTerm}" - ${matchCount} products found`);
+        }
 
         function renderProducts(products) {
             const container = document.getElementById('products-container');
