@@ -533,8 +533,16 @@
                     <div class="product-title">${product.title}</div>
 
                     <div class="price-section">
-                        <span class="current-price">$${product.currentPrice}</span>
-                        <span class="list-price">$${product.listPrice}</span>
+                        <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px;">
+                            <span class="current-price">$${product.currentPrice.toFixed(2)}</span>
+                            <span class="list-price">$${product.listPrice.toFixed(2)}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #51cf66; font-weight: 600;">
+                            You save: $${(product.listPrice - product.currentPrice).toFixed(2)} (${product.discount}%)
+                        </div>
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 3px;">
+                            Weight: ${product.weight}
+                        </div>
                     </div>
 
                     <div class="unit-price">$${product.unitPrice.toFixed(2)}/${product.unitType}</div>
@@ -548,8 +556,12 @@
                     </div>
 
                     <div class="rating">
-                        ${'⭐'.repeat(Math.floor(product.rating))} ${product.rating.toFixed(1)}
-                        <span class="reviews">(${product.reviews.toLocaleString()} reviews)</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.1rem;">${'⭐'.repeat(Math.floor(product.rating))}${product.rating % 1 >= 0.5 ? '½' : ''}</span>
+                            <span style="font-weight: 700; font-size: 1.1rem; color: #333;">${product.rating.toFixed(1)}</span>
+                        </div>
+                        <span class="reviews">(${product.reviews.toLocaleString()} customer reviews)</span>
+                        ${product.rating >= 4.5 ? '<div style="font-size: 0.8rem; color: #51cf66; margin-top: 3px;">⭐ Highly Rated</div>' : ''}
                     </div>
 
                     <div class="scores">
