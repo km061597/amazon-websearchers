@@ -1728,6 +1728,52 @@
             }
         ];
 
+        // Generate Price History for all products (last 6 months)
+        function generatePriceHistory(currentPrice, listPrice) {
+            const monthNames = ["Jun 2024", "Jul 2024", "Aug 2024", "Sep 2024", "Oct 2024", "Nov 2024"];
+            const history = [];
+
+            // Calculate price range and volatility
+            const priceRange = listPrice - currentPrice;
+            const baseVariation = priceRange * 0.15; // 15% variation
+
+            for (let i = 0; i < 6; i++) {
+                let price;
+
+                if (i === 5) {
+                    // Last month is current price
+                    price = currentPrice;
+                } else {
+                    // Earlier months: prices generally higher, with some fluctuation
+                    // Start closer to list price and trend down
+                    const trendFactor = (5 - i) / 5; // 1.0 at month 0, 0.2 at month 4
+                    const randomVariation = (Math.random() - 0.5) * baseVariation;
+                    price = currentPrice + (priceRange * trendFactor * 0.7) + randomVariation;
+
+                    // Ensure price stays within reasonable bounds
+                    price = Math.max(currentPrice * 0.95, Math.min(listPrice * 1.05, price));
+                }
+
+                history.push({
+                    month: monthNames[i],
+                    price: parseFloat(price.toFixed(2))
+                });
+            }
+
+            return history;
+        }
+
+        // Add price history to all products
+        mockProducts.forEach(product => {
+            product.priceHistory = generatePriceHistory(product.currentPrice, product.listPrice);
+
+            // Calculate lowest and highest historical prices
+            const prices = product.priceHistory.map(h => h.price);
+            product.lowestHistoricalPrice = Math.min(...prices);
+            product.highestHistoricalPrice = Math.max(...prices);
+            product.averageHistoricalPrice = parseFloat((prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2));
+        });
+
         let currentProducts = [...mockProducts];
         let currentSearchTerm = '';
 
@@ -2088,6 +2134,14 @@
         console.log('SmartAmazon Demo loaded with', mockProducts.length, 'products');
         console.log('Categories:', [...new Set(mockProducts.map(p => p.category))].join(', '));
         console.log('Best unit price:', Math.min(...mockProducts.map(p => p.unitPrice)).toFixed(4), 'per unit');
+        console.log('Price history generated for all products (6 months)');
+        console.log('Sample price history (Product #1):', mockProducts[0].priceHistory);
+        console.log('Historical stats:', {
+            lowest: mockProducts[0].lowestHistoricalPrice,
+            highest: mockProducts[0].highestHistoricalPrice,
+            average: mockProducts[0].averageHistoricalPrice,
+            current: mockProducts[0].currentPrice
+        });
         console.log('Unit Price Calculator ready - try different weights and units!');
     </script>
 </body>
