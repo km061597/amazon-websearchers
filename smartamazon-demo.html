@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartAmazon Search - Demo with Mock Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            background: #f0f4ff;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #f5f5f5;
+        }
+
+        .product-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .product-brand {
+            color: #667eea;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .price-section {
+            margin: 15px 0;
+        }
+
+        .current-price {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .list-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.9rem;
+            margin-left: 8px;
+        }
+
+        .unit-price {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: inline-block;
+            margin: 10px 0;
+        }
+
+        .badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-best {
+            background: #ffd700;
+            color: #000;
+        }
+
+        .badge-prime {
+            background: #00a8e1;
+            color: white;
+        }
+
+        .badge-discount {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .badge-gem {
+            background: #51cf66;
+            color: white;
+        }
+
+        .badge-sponsored {
+            background: #ffa500;
+            color: white;
+            text-decoration: line-through;
+        }
+
+        .rating {
+            color: #ffa500;
+            font-size: 0.9rem;
+            margin: 8px 0;
+        }
+
+        .reviews {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .scores {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+        }
+
+        .score {
+            background: #f0f4ff;
+            padding: 6px 10px;
+            border-radius: 4px;
+        }
+
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 SmartAmazon Search</h1>
+            <p class="tagline">Amazon without the BS - Find true deals with unit price comparison</p>
+
+            <div class="stats">
+                <div class="stat">📊 Total Products: <span id="total-products">10</span></div>
+                <div class="stat">🚫 Sponsored Hidden: <span id="sponsored-hidden">3</span></div>
+                <div class="stat">💰 Showing Best Unit Prices</div>
+            </div>
+        </header>
+
+        <div class="filter-bar">
+            <strong>Filters:</strong>
+            <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
+            <button class="filter-btn" onclick="filterProducts('no-sponsored')">Hide Sponsored</button>
+            <button class="filter-btn" onclick="filterProducts('prime')">Prime Only</button>
+            <button class="filter-btn" onclick="filterProducts('best-value')">Best Value</button>
+            <button class="filter-btn" onclick="sortProducts('unit-price')">Sort by $/oz</button>
+            <button class="filter-btn" onclick="sortProducts('discount')">Sort by Discount</button>
+        </div>
+
+        <div class="products-grid" id="products-container">
+            <!-- Products will be inserted here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Mock product data
+        const mockProducts = [
+            {
+                id: 1,
+                asin: "B000QSO98W",
+                title: "Optimum Nutrition Gold Standard 100% Whey Protein Powder",
+                brand: "Optimum Nutrition",
+                currentPrice: 54.99,
+                listPrice: 69.99,
+                unitPrice: 0.69,
+                unitType: "oz",
+                weight: "5 lb (80 oz)",
+                discount: 21,
+                rating: 4.6,
+                reviews: 12403,
+                isPrime: true,
+                isSponsored: false,
+                subscribeSave: 15,
+                hiddenGemScore: 85,
+                dealScore: 90,
+                isBestValue: true,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23667eea' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 2,
+                asin: "B00SCO8XM0",
+                title: "Dymatize ISO100 Hydrolyzed Protein Powder, Gourmet Vanilla",
+                brand: "Dymatize",
+                currentPrice: 44.99,
+                listPrice: 54.99,
+                unitPrice: 0.94,
+                unitType: "oz",
+                weight: "3 lb (48 oz)",
+                discount: 18,
+                rating: 4.5,
+                reviews: 8234,
+                isPrime: true,
+                isSponsored: true,
+                subscribeSave: 10,
+                hiddenGemScore: 70,
+                dealScore: 75,
+                isBestValue: false,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23764ba2' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 3,
+                asin: "B001RZP6LW",
+                title: "MyProtein Impact Whey Protein Powder, Chocolate Smooth",
+                brand: "MyProtein",
+                currentPrice: 29.99,
+                listPrice: 39.99,
+                unitPrice: 0.85,
+                unitType: "oz",
+                weight: "2.2 lb (35 oz)",
+                discount: 25,
+                rating: 4.4,
+                reviews: 3421,
+                isPrime: false,
+                isSponsored: false,
+                subscribeSave: 5,
+                hiddenGemScore: 88,
+                dealScore: 80,
+                isBestValue: false,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%2351cf66' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 4,
+                asin: "B002DYJ0O6",
+                title: "BSN SYNTHA-6 Whey Protein Powder with Micellar Casein",
+                brand: "BSN",
+                currentPrice: 49.99,
+                listPrice: 59.99,
+                unitPrice: 0.62,
+                unitType: "oz",
+                weight: "5.04 lb (81 oz)",
+                discount: 17,
+                rating: 4.5,
+                reviews: 5678,
+                isPrime: true,
+                isSponsored: true,
+                subscribeSave: 15,
+                hiddenGemScore: 75,
+                dealScore: 85,
+                isBestValue: true,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23ff6b6b' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 5,
+                asin: "B00I9SNL36",
+                title: "MuscleTech NitroTech Whey Protein Powder Plus Isolate",
+                brand: "MuscleTech",
+                currentPrice: 39.99,
+                listPrice: 49.99,
+                unitPrice: 0.78,
+                unitType: "oz",
+                weight: "4 lb (64 oz)",
+                discount: 20,
+                rating: 4.3,
+                reviews: 7890,
+                isPrime: true,
+                isSponsored: false,
+                subscribeSave: 12,
+                hiddenGemScore: 82,
+                dealScore: 78,
+                isBestValue: false,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23ffa500' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 6,
+                asin: "B01M16K5XV",
+                title: "Isopure Zero Carb Protein Powder, 100% Whey Isolate",
+                brand: "Isopure",
+                currentPrice: 52.99,
+                listPrice: 64.99,
+                unitPrice: 1.10,
+                unitType: "oz",
+                weight: "3 lb (48 oz)",
+                discount: 18,
+                rating: 4.4,
+                reviews: 4567,
+                isPrime: true,
+                isSponsored: true,
+                subscribeSave: 10,
+                hiddenGemScore: 72,
+                dealScore: 73,
+                isBestValue: false,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%2300a8e1' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 7,
+                asin: "B07QFKMQZC",
+                title: "Garden of Life Organic Plant Based Protein Powder, Vanilla",
+                brand: "Garden of Life",
+                currentPrice: 34.99,
+                listPrice: 44.99,
+                unitPrice: 0.91,
+                unitType: "oz",
+                weight: "2.4 lb (38 oz)",
+                discount: 22,
+                rating: 4.5,
+                reviews: 9123,
+                isPrime: true,
+                isSponsored: false,
+                subscribeSave: 15,
+                hiddenGemScore: 86,
+                dealScore: 82,
+                isBestValue: false,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%2351cf66' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EPlant Protein%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 8,
+                asin: "B001E0D4LY",
+                title: "Cellucor Cor-Performance Whey Protein Powder",
+                brand: "Cellucor",
+                currentPrice: 27.99,
+                listPrice: 35.99,
+                unitPrice: 0.87,
+                unitType: "oz",
+                weight: "2 lb (32 oz)",
+                discount: 22,
+                rating: 4.3,
+                reviews: 2345,
+                isPrime: true,
+                isSponsored: false,
+                subscribeSave: 8,
+                hiddenGemScore: 79,
+                dealScore: 76,
+                isBestValue: false,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23667eea' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 9,
+                asin: "B0015R3A9S",
+                title: "NOW Sports Whey Protein Isolate Powder, Unflavored",
+                brand: "NOW Sports",
+                currentPrice: 42.99,
+                listPrice: 52.99,
+                unitPrice: 0.67,
+                unitType: "oz",
+                weight: "5 lb (80 oz)",
+                discount: 19,
+                rating: 4.6,
+                reviews: 6789,
+                isPrime: false,
+                isSponsored: false,
+                subscribeSave: 5,
+                hiddenGemScore: 90,
+                dealScore: 88,
+                isBestValue: true,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23ffd700' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EProtein Powder%3C/text%3E%3C/svg%3E"
+            },
+            {
+                id: 10,
+                asin: "B07BRHXQ3P",
+                title: "Vega Sport Premium Vegan Protein Powder, Chocolate",
+                brand: "Vega Sport",
+                currentPrice: 38.99,
+                listPrice: 49.99,
+                unitPrice: 1.03,
+                unitType: "oz",
+                weight: "2.35 lb (38 oz)",
+                discount: 22,
+                rating: 4.4,
+                reviews: 5432,
+                isPrime: true,
+                isSponsored: false,
+                subscribeSave: 12,
+                hiddenGemScore: 81,
+                dealScore: 79,
+                isBestValue: false,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%2351cf66' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3EVegan Protein%3C/text%3E%3C/svg%3E"
+            }
+        ];
+
+        let currentProducts = [...mockProducts];
+
+        function renderProducts(products) {
+            const container = document.getElementById('products-container');
+
+            container.innerHTML = products.map(product => `
+                <div class="product-card" data-sponsored="${product.isSponsored}" data-prime="${product.isPrime}" data-best="${product.isBestValue}">
+                    <img src="${product.image}" alt="${product.title}" class="product-image">
+
+                    <div class="product-brand">${product.brand}</div>
+                    <div class="product-title">${product.title}</div>
+
+                    <div class="price-section">
+                        <span class="current-price">$${product.currentPrice}</span>
+                        <span class="list-price">$${product.listPrice}</span>
+                    </div>
+
+                    <div class="unit-price">$${product.unitPrice.toFixed(2)}/${product.unitType}</div>
+
+                    <div class="badges">
+                        ${product.isBestValue ? '<span class="badge badge-best">👑 BEST VALUE</span>' : ''}
+                        ${product.isPrime ? '<span class="badge badge-prime">✓ Prime</span>' : ''}
+                        ${product.discount > 20 ? `<span class="badge badge-discount">${product.discount}% OFF</span>` : ''}
+                        ${product.hiddenGemScore >= 85 ? '<span class="badge badge-gem">💎 Hidden Gem</span>' : ''}
+                        ${product.isSponsored ? '<span class="badge badge-sponsored">Sponsored</span>' : ''}
+                    </div>
+
+                    <div class="rating">
+                        ${'⭐'.repeat(Math.floor(product.rating))} ${product.rating.toFixed(1)}
+                        <span class="reviews">(${product.reviews.toLocaleString()} reviews)</span>
+                    </div>
+
+                    <div class="scores">
+                        <span class="score">💎 Gem: ${product.hiddenGemScore}/100</span>
+                        <span class="score">⭐ Deal: ${product.dealScore}/100</span>
+                    </div>
+
+                    ${product.subscribeSave > 0 ? `<div style="font-size: 0.85rem; color: #667eea; margin-top: 10px;">📦 Subscribe & Save ${product.subscribeSave}%</div>` : ''}
+                </div>
+            `).join('');
+
+            // Update stats
+            const sponsored = products.filter(p => p.isSponsored).length;
+            document.getElementById('total-products').textContent = products.length;
+            document.getElementById('sponsored-hidden').textContent = sponsored;
+        }
+
+        function filterProducts(filter) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            let filtered = [...mockProducts];
+
+            switch(filter) {
+                case 'no-sponsored':
+                    filtered = filtered.filter(p => !p.isSponsored);
+                    break;
+                case 'prime':
+                    filtered = filtered.filter(p => p.isPrime);
+                    break;
+                case 'best-value':
+                    filtered = filtered.filter(p => p.isBestValue);
+                    break;
+                case 'all':
+                default:
+                    // Show all
+                    break;
+            }
+
+            currentProducts = filtered;
+            renderProducts(filtered);
+        }
+
+        function sortProducts(sortType) {
+            let sorted = [...currentProducts];
+
+            switch(sortType) {
+                case 'unit-price':
+                    sorted.sort((a, b) => a.unitPrice - b.unitPrice);
+                    break;
+                case 'discount':
+                    sorted.sort((a, b) => b.discount - a.discount);
+                    break;
+            }
+
+            renderProducts(sorted);
+        }
+
+        // Initial render
+        renderProducts(mockProducts);
+
+        // Add some console info
+        console.log('SmartAmazon Demo loaded with', mockProducts.length, 'products');
+        console.log('Best unit price:', Math.min(...mockProducts.map(p => p.unitPrice)).toFixed(2) + '/oz');
+    </script>
+</body>
+</html>
