@@ -1947,6 +1947,47 @@
             product.averageHistoricalPrice = parseFloat((prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2));
         });
 
+        // Add multi-pack data and bulk savings calculation
+        function addBulkSavingsData() {
+            // Define multi-pack products with pack size and single unit price
+            const multiPackProducts = [
+                { id: 1, packSize: 1, singleUnitPrice: 54.99 }, // Already single
+                { id: 2, packSize: 1, singleUnitPrice: 44.99 },
+                { id: 32, packSize: 250, singleUnitPrice: 0.076 }, // Vitamin D3 - 250 count vs single
+                { id: 34, packSize: 150, singleUnitPrice: 0.16 }, // Multivitamin - 150 count vs single
+                { id: 35, packSize: 12, singleUnitPrice: 4.49 }, // Gillette razors - 12 pack vs single
+                { id: 37, packSize: 6, singleUnitPrice: 2.99 }, // Oral-B floss - 6 pack vs single
+                { id: 38, packSize: 50, singleUnitPrice: 0.26 }, // Neutrogena wipes - 50 count vs single
+                { id: 39, packSize: 44, singleUnitPrice: 1.49 }, // Crest strips - 44 strips vs single
+                { id: 41, packSize: 98, singleUnitPrice: 0.31 }, // Granola bars - 98 count vs single
+                { id: 42, packSize: 40, singleUnitPrice: 0.99 }, // KIND bars - 40 count vs single
+                { id: 44, packSize: 50, singleUnitPrice: 0.89 }, // Starbucks coffee - 50 count vs single
+                { id: 45, packSize: 35, singleUnitPrice: 0.79 }, // Coca-Cola - 35 pack vs single
+                { id: 24, packSize: 10, singleUnitPrice: 29.99 }, // Cookware set - 10 pieces vs single
+                { id: 28, packSize: 2, singleUnitPrice: 13.99 }, // Curtains - 2 pack vs single
+            ];
+
+            mockProducts.forEach(product => {
+                const multiPackInfo = multiPackProducts.find(mp => mp.id === product.id);
+
+                if (multiPackInfo && multiPackInfo.packSize > 1) {
+                    product.packSize = multiPackInfo.packSize;
+                    product.singleUnitPrice = multiPackInfo.singleUnitPrice;
+                    product.pricePerUnit = product.currentPrice / product.packSize;
+
+                    // Calculate bulk savings
+                    const singlePackTotal = multiPackInfo.singleUnitPrice * product.packSize;
+                    product.bulkSavings = singlePackTotal - product.currentPrice;
+                    product.bulkSavingsPercent = ((product.bulkSavings / singlePackTotal) * 100).toFixed(0);
+                    product.isMultiPack = true;
+                } else {
+                    product.isMultiPack = false;
+                }
+            });
+        }
+
+        addBulkSavingsData();
+
         let currentProducts = [...mockProducts];
         let currentSearchTerm = '';
 
@@ -2001,6 +2042,7 @@
                         ${product.discount > 20 ? `<span class="badge badge-discount">${product.discount}% OFF</span>` : ''}
                         ${product.hiddenGemScore >= 85 ? '<span class="badge badge-gem">💎 Hidden Gem</span>' : ''}
                         ${product.isSponsored ? '<span class="badge badge-sponsored">Sponsored</span>' : ''}
+                        ${product.isMultiPack ? `<span class="badge badge-bulk" style="background: #ff9800; color: white;">📦 BULK: Save ${product.bulkSavingsPercent}%</span>` : ''}
                     </div>
 
                     <div class="rating">
@@ -2018,6 +2060,26 @@
                     </div>
 
                     ${product.subscribeSave > 0 ? `<div style="font-size: 0.85rem; color: #667eea; margin-top: 10px;">📦 Subscribe & Save ${product.subscribeSave}%</div>` : ''}
+
+                    ${product.isMultiPack ? `
+                        <div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin-top: 12px; border-left: 4px solid #ff9800;">
+                            <div style="font-size: 0.9rem; font-weight: 700; color: #ff9800; margin-bottom: 6px;">
+                                💰 Bulk Savings
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">
+                                Pack Size: <strong>${product.packSize} units</strong>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">
+                                Price per unit: <strong>$${product.pricePerUnit.toFixed(2)}</strong>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">
+                                Single unit price: <strong>$${product.singleUnitPrice.toFixed(2)}</strong>
+                            </div>
+                            <div style="font-size: 0.9rem; color: #ff9800; font-weight: 700; margin-top: 6px;">
+                                You save $${product.bulkSavings.toFixed(2)} (${product.bulkSavingsPercent}%) by buying in bulk!
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
             `).join('');
 
@@ -2379,6 +2441,20 @@
                         </div>
                     </div>
 
+                    ${product.isMultiPack ? `
+                        <div class="comparison-detail">
+                            <strong>💰 Bulk Savings</strong>
+                            <div class="comparison-detail-value">
+                                <div style="margin-bottom: 4px;">Pack: ${product.packSize} units</div>
+                                <div style="margin-bottom: 4px;">Per unit: $${product.pricePerUnit.toFixed(2)}</div>
+                                <div style="margin-bottom: 4px;">Single: $${product.singleUnitPrice.toFixed(2)}</div>
+                                <div style="color: #ff9800; font-weight: 700;">
+                                    Save $${product.bulkSavings.toFixed(2)} (${product.bulkSavingsPercent}%)
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <div class="price-history-summary">
                         <h5>📈 Price History (6 Months)</h5>
                         <div class="price-history-item">
@@ -2454,6 +2530,22 @@
             average: mockProducts[0].averageHistoricalPrice,
             current: mockProducts[0].currentPrice
         });
+
+        const multiPackCount = mockProducts.filter(p => p.isMultiPack).length;
+        console.log(`Multi-pack products: ${multiPackCount} products with bulk savings`);
+
+        const sampleMultiPack = mockProducts.find(p => p.isMultiPack);
+        if (sampleMultiPack) {
+            console.log('Sample bulk savings:', {
+                product: sampleMultiPack.title.substring(0, 50),
+                packSize: sampleMultiPack.packSize,
+                pricePerUnit: sampleMultiPack.pricePerUnit,
+                singleUnitPrice: sampleMultiPack.singleUnitPrice,
+                bulkSavings: sampleMultiPack.bulkSavings,
+                bulkSavingsPercent: sampleMultiPack.bulkSavingsPercent + '%'
+            });
+        }
+
         console.log('Unit Price Calculator ready - try different weights and units!');
     </script>
 </body>
