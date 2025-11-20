@@ -57,6 +57,163 @@
             color: #667eea;
         }
 
+        .main-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-width: 280px;
+            max-width: 280px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .sidebar h3 {
+            color: #667eea;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f4ff;
+        }
+
+        .filter-section {
+            margin-bottom: 25px;
+        }
+
+        .filter-section h4 {
+            color: #333;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .price-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .price-input-group {
+            flex: 1;
+        }
+
+        .price-input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .price-input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .price-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        .category-filter {
+            margin-bottom: 10px;
+        }
+
+        .category-filter label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .category-filter label:hover {
+            background: #f0f4ff;
+        }
+
+        .category-filter input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .apply-filters-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        .apply-filters-btn:hover {
+            background: #5568d3;
+        }
+
+        .reset-filters-btn {
+            width: 100%;
+            padding: 10px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+
+        .reset-filters-btn:hover {
+            background: #f0f4ff;
+        }
+
+        .products-area {
+            flex: 1;
+            min-width: 0;
+        }
+
         .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -233,6 +390,16 @@
                 font-size: 1.5rem;
             }
 
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: static;
+                max-width: 100%;
+                margin-bottom: 20px;
+            }
+
             .products-grid {
                 grid-template-columns: 1fr;
             }
@@ -272,6 +439,79 @@
                 oninput="searchProducts(this.value)"
             />
         </div>
+
+        <!-- Main Content Area with Sidebar -->
+        <div class="main-content">
+            <!-- Filter Sidebar -->
+            <aside class="sidebar">
+                <h3>🎯 Filters</h3>
+
+                <!-- Price Range Filter -->
+                <div class="filter-section">
+                    <h4>Price Range</h4>
+                    <div class="price-inputs">
+                        <div class="price-input-group">
+                            <label for="min-price">Min ($)</label>
+                            <input type="number" id="min-price" value="0" min="0" max="1000" step="10" oninput="updatePriceSliders()">
+                        </div>
+                        <div class="price-input-group">
+                            <label for="max-price">Max ($)</label>
+                            <input type="number" id="max-price" value="1000" min="0" max="1000" step="10" oninput="updatePriceSliders()">
+                        </div>
+                    </div>
+                    <div class="price-slider">
+                        <input type="range" id="min-price-slider" min="0" max="1000" value="0" step="10" oninput="updatePriceInputs('min')">
+                    </div>
+                    <div class="price-slider">
+                        <input type="range" id="max-price-slider" min="0" max="1000" value="1000" step="10" oninput="updatePriceInputs('max')">
+                    </div>
+                    <div style="font-size: 0.85rem; color: #666; margin-top: 8px;">
+                        <span id="price-range-display">$0 - $1000</span>
+                    </div>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="filter-section">
+                    <h4>Categories</h4>
+                    <div class="category-filter">
+                        <label>
+                            <input type="checkbox" value="Grocery" checked onchange="applyAllFilters()">
+                            <span>Grocery</span>
+                        </label>
+                    </div>
+                    <div class="category-filter">
+                        <label>
+                            <input type="checkbox" value="Electronics" checked onchange="applyAllFilters()">
+                            <span>Electronics</span>
+                        </label>
+                    </div>
+                    <div class="category-filter">
+                        <label>
+                            <input type="checkbox" value="Home & Kitchen" checked onchange="applyAllFilters()">
+                            <span>Home & Kitchen</span>
+                        </label>
+                    </div>
+                    <div class="category-filter">
+                        <label>
+                            <input type="checkbox" value="Health & Personal Care" checked onchange="applyAllFilters()">
+                            <span>Health & Personal Care</span>
+                        </label>
+                    </div>
+                    <div class="category-filter">
+                        <label>
+                            <input type="checkbox" value="Sports & Outdoors" checked onchange="applyAllFilters()">
+                            <span>Sports & Outdoors</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <button class="apply-filters-btn" onclick="applyAllFilters()">Apply Filters</button>
+                <button class="reset-filters-btn" onclick="resetAllFilters()">Reset All</button>
+            </aside>
+
+            <!-- Products Area -->
+            <div class="products-area">
 
         <!-- Unit Price Calculator -->
         <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -367,7 +607,10 @@
         <div class="products-grid" id="products-container">
             <!-- Products will be inserted here by JavaScript -->
         </div>
-    </div>
+
+            </div><!-- End products-area -->
+        </div><!-- End main-content -->
+    </div><!-- End container -->
 
     <script>
         // Mock product data - 50 products across multiple categories
@@ -1707,6 +1950,132 @@
 
             // Log to console for debugging
             console.log(`Unit Price Calc: $${price} for ${weight}${unit} = $${unitPrice.toFixed(2)}/oz`);
+        }
+
+        // Price Slider Functions
+        function updatePriceInputs(type) {
+            if (type === 'min') {
+                const value = document.getElementById('min-price-slider').value;
+                document.getElementById('min-price').value = value;
+            } else {
+                const value = document.getElementById('max-price-slider').value;
+                document.getElementById('max-price').value = value;
+            }
+            updatePriceDisplay();
+            applyAllFilters();
+        }
+
+        function updatePriceSliders() {
+            const minPrice = parseInt(document.getElementById('min-price').value) || 0;
+            const maxPrice = parseInt(document.getElementById('max-price').value) || 1000;
+
+            document.getElementById('min-price-slider').value = minPrice;
+            document.getElementById('max-price-slider').value = maxPrice;
+
+            updatePriceDisplay();
+            applyAllFilters();
+        }
+
+        function updatePriceDisplay() {
+            const minPrice = parseInt(document.getElementById('min-price').value) || 0;
+            const maxPrice = parseInt(document.getElementById('max-price').value) || 1000;
+            document.getElementById('price-range-display').textContent = `$${minPrice} - $${maxPrice}`;
+        }
+
+        // Apply All Filters (Price Range + Categories + Search + Toggles)
+        function applyAllFilters() {
+            const minPrice = parseFloat(document.getElementById('min-price').value) || 0;
+            const maxPrice = parseFloat(document.getElementById('max-price').value) || 1000;
+
+            // Get selected categories
+            const categoryCheckboxes = document.querySelectorAll('.category-filter input[type="checkbox"]');
+            const selectedCategories = Array.from(categoryCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+
+            // Get toggle states
+            const showSponsored = document.getElementById('toggle-sponsored').checked;
+            const showNonPrime = document.getElementById('toggle-non-prime').checked;
+            const showLowRating = document.getElementById('toggle-low-rating').checked;
+            const showHighPrice = document.getElementById('toggle-high-price').checked;
+            const showVegan = document.getElementById('toggle-vegan').checked;
+            const requireSubscribe = document.getElementById('toggle-subscribe').checked;
+
+            let filtered = mockProducts.filter(product => {
+                // Price range filter
+                if (product.currentPrice < minPrice || product.currentPrice > maxPrice) {
+                    return false;
+                }
+
+                // Category filter
+                if (!selectedCategories.includes(product.category)) {
+                    return false;
+                }
+
+                // Search filter
+                if (currentSearchTerm) {
+                    const titleMatch = product.title.toLowerCase().includes(currentSearchTerm);
+                    const brandMatch = product.brand.toLowerCase().includes(currentSearchTerm);
+                    const categoryMatch = product.category.toLowerCase().includes(currentSearchTerm);
+                    if (!titleMatch && !brandMatch && !categoryMatch) return false;
+                }
+
+                // Toggle filters
+                if (!showSponsored && product.isSponsored) return false;
+                if (!showNonPrime && !product.isPrime) return false;
+                if (!showLowRating && product.rating < 4.5) return false;
+                if (!showHighPrice && product.currentPrice >= 50) return false;
+
+                const isVegan = product.title.toLowerCase().includes('vegan') ||
+                               product.title.toLowerCase().includes('plant');
+                if (!showVegan && isVegan) return false;
+
+                if (requireSubscribe && product.subscribeSave < 10) return false;
+
+                return true;
+            });
+
+            currentProducts = filtered;
+            renderProducts(filtered);
+
+            console.log(`Filters applied: ${filtered.length}/${mockProducts.length} products shown`);
+        }
+
+        // Reset All Filters
+        function resetAllFilters() {
+            // Reset price range
+            document.getElementById('min-price').value = 0;
+            document.getElementById('max-price').value = 1000;
+            document.getElementById('min-price-slider').value = 0;
+            document.getElementById('max-price-slider').value = 1000;
+            updatePriceDisplay();
+
+            // Reset category checkboxes
+            document.querySelectorAll('.category-filter input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+
+            // Reset search
+            document.getElementById('search-input').value = '';
+            currentSearchTerm = '';
+
+            // Reset toggles
+            document.getElementById('toggle-sponsored').checked = true;
+            document.getElementById('toggle-non-prime').checked = true;
+            document.getElementById('toggle-low-rating').checked = true;
+            document.getElementById('toggle-high-price').checked = true;
+            document.getElementById('toggle-vegan').checked = true;
+            document.getElementById('toggle-subscribe').checked = false;
+
+            // Reset filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-all').classList.add('active');
+
+            // Show all products
+            currentProducts = [...mockProducts];
+            renderProducts(mockProducts);
+
+            console.log('All filters reset - showing all products');
         }
 
         // Initial render
