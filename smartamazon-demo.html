@@ -229,6 +229,35 @@
             position: relative;
         }
 
+        .product-card.selected-for-comparison {
+            border: 3px solid #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .comparison-checkbox {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            z-index: 10;
+            accent-color: #667eea;
+        }
+
+        .comparison-checkbox-label {
+            position: absolute;
+            top: 45px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #667eea;
+            font-weight: 600;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         .product-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 12px rgba(0,0,0,0.15);
@@ -385,6 +414,131 @@
             color: white;
         }
 
+        .comparison-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 3px solid #667eea;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+            max-height: 60vh;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .comparison-panel.active {
+            display: block;
+        }
+
+        .comparison-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .comparison-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+        }
+
+        .comparison-close-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .comparison-close-btn:hover {
+            background: #f0f4ff;
+        }
+
+        .comparison-content {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .comparison-card {
+            min-width: 300px;
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .comparison-card h4 {
+            color: #667eea;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .comparison-detail {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .comparison-detail strong {
+            color: #333;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .comparison-detail-value {
+            color: #666;
+        }
+
+        .comparison-remove-btn {
+            width: 100%;
+            padding: 10px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+
+        .comparison-remove-btn:hover {
+            background: #ff5252;
+        }
+
+        .price-history-summary {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .price-history-summary h5 {
+            color: #667eea;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .price-history-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.5rem;
@@ -411,6 +565,14 @@
 
             .filter-btn {
                 width: 100%;
+            }
+
+            .comparison-content {
+                flex-direction: column;
+            }
+
+            .comparison-card {
+                min-width: 100%;
             }
         }
     </style>
@@ -611,6 +773,17 @@
             </div><!-- End products-area -->
         </div><!-- End main-content -->
     </div><!-- End container -->
+
+    <!-- Comparison Panel -->
+    <div id="comparison-panel" class="comparison-panel">
+        <div class="comparison-header">
+            <h3>📊 Product Comparison (<span id="comparison-count">0</span> selected)</h3>
+            <button class="comparison-close-btn" onclick="closeComparisonPanel()">Close Comparison</button>
+        </div>
+        <div id="comparison-content" class="comparison-content">
+            <!-- Comparison cards will be inserted here -->
+        </div>
+    </div>
 
     <script>
         // Mock product data - 50 products across multiple categories
@@ -1799,7 +1972,9 @@
             const container = document.getElementById('products-container');
 
             container.innerHTML = products.map(product => `
-                <div class="product-card" data-sponsored="${product.isSponsored}" data-prime="${product.isPrime}" data-best="${product.isBestValue}">
+                <div class="product-card" data-product-id="${product.id}" data-sponsored="${product.isSponsored}" data-prime="${product.isPrime}" data-best="${product.isBestValue}">
+                    <input type="checkbox" class="comparison-checkbox" id="compare-${product.id}" onchange="toggleComparison(${product.id})">
+                    <label class="comparison-checkbox-label" for="compare-${product.id}">Compare</label>
                     <img src="${product.image}" alt="${product.title}" class="product-image">
 
                     <div class="product-brand">${product.brand}</div>
@@ -2122,6 +2297,143 @@
             renderProducts(mockProducts);
 
             console.log('All filters reset - showing all products');
+        }
+
+        // Comparison Feature
+        let selectedForComparison = [];
+
+        function toggleComparison(productId) {
+            const checkbox = document.getElementById(`compare-${productId}`);
+            const productCard = document.querySelector(`[data-product-id="${productId}"]`);
+
+            if (checkbox.checked) {
+                // Add to comparison
+                if (selectedForComparison.length >= 4) {
+                    alert('You can compare up to 4 products at a time');
+                    checkbox.checked = false;
+                    return;
+                }
+                selectedForComparison.push(productId);
+                productCard.classList.add('selected-for-comparison');
+            } else {
+                // Remove from comparison
+                selectedForComparison = selectedForComparison.filter(id => id !== productId);
+                productCard.classList.remove('selected-for-comparison');
+            }
+
+            updateComparisonPanel();
+        }
+
+        function updateComparisonPanel() {
+            const panel = document.getElementById('comparison-panel');
+            const content = document.getElementById('comparison-content');
+            const count = document.getElementById('comparison-count');
+
+            count.textContent = selectedForComparison.length;
+
+            if (selectedForComparison.length === 0) {
+                panel.classList.remove('active');
+                return;
+            }
+
+            panel.classList.add('active');
+
+            // Get products for comparison
+            const productsToCompare = mockProducts.filter(p => selectedForComparison.includes(p.id));
+
+            content.innerHTML = productsToCompare.map(product => `
+                <div class="comparison-card">
+                    <h4>${product.brand} - ${product.title.substring(0, 50)}...</h4>
+
+                    <div class="comparison-detail">
+                        <strong>Category</strong>
+                        <div class="comparison-detail-value">${product.category}</div>
+                    </div>
+
+                    <div class="comparison-detail">
+                        <strong>Current Price</strong>
+                        <div class="comparison-detail-value" style="color: #667eea; font-size: 1.3rem; font-weight: 700;">$${product.currentPrice.toFixed(2)}</div>
+                    </div>
+
+                    <div class="comparison-detail">
+                        <strong>List Price</strong>
+                        <div class="comparison-detail-value">$${product.listPrice.toFixed(2)} <span style="color: #51cf66;">(Save ${product.discount}%)</span></div>
+                    </div>
+
+                    <div class="comparison-detail">
+                        <strong>Unit Price</strong>
+                        <div class="comparison-detail-value" style="font-weight: 700; color: #764ba2;">$${product.unitPrice.toFixed(2)}/${product.unitType}</div>
+                    </div>
+
+                    <div class="comparison-detail">
+                        <strong>Rating</strong>
+                        <div class="comparison-detail-value">${'⭐'.repeat(Math.floor(product.rating))} ${product.rating.toFixed(1)} (${product.reviews.toLocaleString()} reviews)</div>
+                    </div>
+
+                    <div class="comparison-detail">
+                        <strong>Features</strong>
+                        <div class="comparison-detail-value">
+                            ${product.isPrime ? '✓ Prime ' : ''}
+                            ${product.isBestValue ? '👑 Best Value ' : ''}
+                            ${product.subscribeSave > 0 ? `📦 Save ${product.subscribeSave}% ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="price-history-summary">
+                        <h5>📈 Price History (6 Months)</h5>
+                        <div class="price-history-item">
+                            <span>Lowest:</span>
+                            <strong style="color: #51cf66;">$${product.lowestHistoricalPrice.toFixed(2)}</strong>
+                        </div>
+                        <div class="price-history-item">
+                            <span>Highest:</span>
+                            <strong style="color: #ff6b6b;">$${product.highestHistoricalPrice.toFixed(2)}</strong>
+                        </div>
+                        <div class="price-history-item">
+                            <span>Average:</span>
+                            <strong style="color: #667eea;">$${product.averageHistoricalPrice.toFixed(2)}</strong>
+                        </div>
+                        <div class="price-history-item" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+                            <span>Current vs Avg:</span>
+                            <strong style="color: ${product.currentPrice < product.averageHistoricalPrice ? '#51cf66' : '#ff6b6b'};">
+                                ${product.currentPrice < product.averageHistoricalPrice ? '↓' : '↑'}
+                                $${Math.abs(product.currentPrice - product.averageHistoricalPrice).toFixed(2)}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <button class="comparison-remove-btn" onclick="removeFromComparison(${product.id})">
+                        Remove from Comparison
+                    </button>
+                </div>
+            `).join('');
+
+            console.log(`Comparison panel updated: ${selectedForComparison.length} products`);
+        }
+
+        function removeFromComparison(productId) {
+            const checkbox = document.getElementById(`compare-${productId}`);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+            toggleComparison(productId);
+        }
+
+        function closeComparisonPanel() {
+            // Uncheck all comparison checkboxes
+            selectedForComparison.forEach(id => {
+                const checkbox = document.getElementById(`compare-${id}`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                }
+                const productCard = document.querySelector(`[data-product-id="${id}"]`);
+                if (productCard) {
+                    productCard.classList.remove('selected-for-comparison');
+                }
+            });
+
+            selectedForComparison = [];
+            updateComparisonPanel();
         }
 
         // Initial render
