@@ -272,6 +272,40 @@
             />
         </div>
 
+        <!-- Unit Price Calculator -->
+        <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: #667eea; margin-bottom: 15px;">💰 Unit Price Calculator</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #333;">Price ($)</label>
+                    <input type="number" id="calc-price" value="54.99" step="0.01" style="width: 100%; padding: 8px; border: 2px solid #667eea; border-radius: 6px;" oninput="calculateUnitPrice()">
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #333;">Weight</label>
+                    <input type="number" id="calc-weight" value="5" step="0.1" style="width: 100%; padding: 8px; border: 2px solid #667eea; border-radius: 6px;" oninput="calculateUnitPrice()">
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #333;">Unit</label>
+                    <select id="calc-unit" style="width: 100%; padding: 8px; border: 2px solid #667eea; border-radius: 6px;" onchange="calculateUnitPrice()">
+                        <option value="oz">oz (ounce)</option>
+                        <option value="lb" selected>lb (pound)</option>
+                        <option value="g">g (gram)</option>
+                        <option value="kg">kg (kilogram)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; color: #333;">Result</label>
+                    <div id="calc-result" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 12px; border-radius: 6px; font-size: 1.2rem; font-weight: 700; text-align: center;">
+                        $0.69/oz
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 12px; background: #f0f4ff; border-radius: 6px; font-size: 0.9rem; color: #666;">
+                <strong>Formula:</strong> Unit Price = Total Price ÷ (Weight × Conversion Factor)
+                <br><span id="calc-formula" style="color: #667eea;">$54.99 ÷ (5 lb × 16 oz/lb) = $0.69/oz</span>
+            </div>
+        </div>
+
         <div class="filter-bar">
             <strong>Filters:</strong>
             <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
@@ -623,12 +657,47 @@
             renderProducts(sorted);
         }
 
+        // Unit Price Calculator
+        function calculateUnitPrice() {
+            const price = parseFloat(document.getElementById('calc-price').value) || 0;
+            const weight = parseFloat(document.getElementById('calc-weight').value) || 0;
+            const unit = document.getElementById('calc-unit').value;
+
+            // Conversion factors to ounces
+            const conversions = {
+                'oz': 1,
+                'lb': 16,
+                'g': 0.0353,
+                'kg': 35.274
+            };
+
+            const weightInOz = weight * conversions[unit];
+            const unitPrice = weight > 0 ? price / weightInOz : 0;
+
+            // Update result display
+            document.getElementById('calc-result').textContent = `$${unitPrice.toFixed(2)}/oz`;
+
+            // Update formula explanation
+            const conversionFactor = conversions[unit];
+            const formulaText = weight > 0
+                ? `$${price.toFixed(2)} ÷ (${weight} ${unit} × ${conversionFactor} oz/${unit}) = $${unitPrice.toFixed(2)}/oz`
+                : 'Enter values to calculate';
+            document.getElementById('calc-formula').textContent = formulaText;
+
+            // Log to console for debugging
+            console.log(`Unit Price Calc: $${price} for ${weight}${unit} = $${unitPrice.toFixed(2)}/oz`);
+        }
+
         // Initial render
         renderProducts(mockProducts);
+
+        // Initialize calculator
+        calculateUnitPrice();
 
         // Add some console info
         console.log('SmartAmazon Demo loaded with', mockProducts.length, 'products');
         console.log('Best unit price:', Math.min(...mockProducts.map(p => p.unitPrice)).toFixed(2) + '/oz');
+        console.log('Unit Price Calculator ready - try different weights and units!');
     </script>
 </body>
 </html>
