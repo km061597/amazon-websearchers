@@ -84,10 +84,25 @@ FEATURES IMPLEMENTED:
    • Clean, modern design with rounded corners
 
 📈 ANALYTICS & SCORES
-   • Hidden Gem Score (0-100)
-   • Deal Score (0-100)
+   • Comprehensive Deal Score (0-100) calculated from:
+     - Discount percentage (0-30 points)
+     - Unit price vs category median (0-25 points)
+     - Bulk savings percentage (0-20 points)
+     - Customer rating (0-15 points)
+     - Price below 6-month average (0-10 points)
    • Customer ratings (1-5 stars)
    • Review counts with thousands separator
+
+🏆 DEAL RANKING ENGINE
+   • Intelligent scoring algorithm for each product
+   • Category-based unit price comparison
+   • Dynamic deal labels with visual indicators:
+     - 🔥 Top Deal (Score ≥80): Exceptional value
+     - ✅ Good Value (Score 60-79): Solid deal
+     - 💎 Hidden Gem (Score 50-79, rating ≥4.5, <5000 reviews): Great quality, under the radar
+     - ⚠️ Overpriced (Score <50): Price may be higher than average
+   • Prominent display on product cards and comparison panel
+   • Comprehensive scoring formula documented in code
 
 🎯 SPONSORED CONTENT
    • 30% of products marked as sponsored (15 of 50)
@@ -2182,6 +2197,166 @@ LAST UPDATED: 2024-11-21
 
         addBulkSavingsData();
 
+        /**
+         * ═══════════════════════════════════════════════════════════════════════════
+         * DEAL RANKING ENGINE
+         * ═══════════════════════════════════════════════════════════════════════════
+         *
+         * This engine calculates a comprehensive deal score for each product based on:
+         *
+         * 1. Discount Percentage (0-30 points)
+         *    - Higher discount = better deal
+         *    - Formula: (discount% / 100) * 30
+         *    - Example: 25% off = 7.5 points
+         *
+         * 2. Unit Price vs Category Median (0-25 points)
+         *    - Lower unit price compared to category = better deal
+         *    - Formula: 25 * (1 - (unitPrice / categoryMedian))
+         *    - Capped at 25 points (can't be negative)
+         *    - Example: If product is 20% below median = 5 points
+         *
+         * 3. Bulk Savings Percentage (0-20 points, if applicable)
+         *    - Higher bulk savings = better deal
+         *    - Formula: (bulkSavings% / 100) * 20
+         *    - Example: 30% bulk savings = 6 points
+         *
+         * 4. Customer Rating (0-15 points)
+         *    - Higher rating = better quality deal
+         *    - Formula: (rating / 5) * 15
+         *    - Example: 4.5 stars = 13.5 points
+         *
+         * 5. Price Below Historical Average (0-10 points)
+         *    - Current price below 6-month average = bonus points
+         *    - Formula: 10 points if below average, 0 if above
+         *
+         * TOTAL SCORE: 0-100 points
+         *
+         * Deal Labels:
+         * - 🔥 Top Deal:     Score ≥ 80 (exceptional value)
+         * - ✅ Good Value:   Score 60-79 (solid deal)
+         * - 💎 Hidden Gem:   Score 50-79 AND rating ≥ 4.5 AND low reviews (<5000)
+         * - ⚠️ Overpriced:  Score < 50 (below average value)
+         *
+         * ═══════════════════════════════════════════════════════════════════════════
+         */
+
+        function calculateCategoryMedians() {
+            const categories = ['Grocery', 'Electronics', 'Home & Kitchen', 'Health & Personal Care', 'Sports & Outdoors'];
+            const medians = {};
+
+            categories.forEach(category => {
+                const categoryProducts = mockProducts.filter(p => p.category === category);
+                const unitPrices = categoryProducts.map(p => p.unitPrice).sort((a, b) => a - b);
+                const midIndex = Math.floor(unitPrices.length / 2);
+
+                if (unitPrices.length % 2 === 0) {
+                    medians[category] = (unitPrices[midIndex - 1] + unitPrices[midIndex]) / 2;
+                } else {
+                    medians[category] = unitPrices[midIndex];
+                }
+            });
+
+            return medians;
+        }
+
+        function calculateDealScore(product, categoryMedians) {
+            let score = 0;
+
+            // 1. Discount Percentage (0-30 points)
+            const discountScore = (product.discount / 100) * 30;
+            score += discountScore;
+
+            // 2. Unit Price vs Category Median (0-25 points)
+            const categoryMedian = categoryMedians[product.category];
+            if (categoryMedian) {
+                const priceRatio = product.unitPrice / categoryMedian;
+                const priceScore = Math.max(0, 25 * (1 - priceRatio));
+                score += priceScore;
+            }
+
+            // 3. Bulk Savings (0-20 points, if applicable)
+            if (product.isMultiPack && product.bulkSavingsPercent) {
+                const bulkScore = (parseFloat(product.bulkSavingsPercent) / 100) * 20;
+                score += bulkScore;
+            }
+
+            // 4. Customer Rating (0-15 points)
+            const ratingScore = (product.rating / 5) * 15;
+            score += ratingScore;
+
+            // 5. Price Below Historical Average (0-10 points)
+            if (product.currentPrice < product.averageHistoricalPrice) {
+                score += 10;
+            }
+
+            return Math.min(100, Math.round(score));
+        }
+
+        function assignDealLabel(product, dealScore) {
+            // 🔥 Top Deal: Score ≥ 80 (exceptional value)
+            if (dealScore >= 80) {
+                return {
+                    emoji: '🔥',
+                    text: 'TOP DEAL',
+                    color: '#ff4757',
+                    description: 'Exceptional value - best price and quality!'
+                };
+            }
+
+            // 💎 Hidden Gem: Score 50-79 AND rating ≥ 4.5 AND low reviews (<5000)
+            if (dealScore >= 50 && dealScore < 80 && product.rating >= 4.5 && product.reviews < 5000) {
+                return {
+                    emoji: '💎',
+                    text: 'HIDDEN GEM',
+                    color: '#5f27cd',
+                    description: 'Great quality, under the radar!'
+                };
+            }
+
+            // ✅ Good Value: Score 60-79 (solid deal)
+            if (dealScore >= 60 && dealScore < 80) {
+                return {
+                    emoji: '✅',
+                    text: 'GOOD VALUE',
+                    color: '#26de81',
+                    description: 'Solid deal with good pricing'
+                };
+            }
+
+            // ⚠️ Overpriced: Score < 50 (below average value)
+            if (dealScore < 50) {
+                return {
+                    emoji: '⚠️',
+                    text: 'OVERPRICED',
+                    color: '#fed330',
+                    description: 'Price may be higher than average'
+                };
+            }
+
+            // Default: Decent Value (Score 50-59)
+            return {
+                emoji: '📊',
+                text: 'DECENT VALUE',
+                color: '#778ca3',
+                description: 'Fair pricing'
+            };
+        }
+
+        function applyDealRankings() {
+            const categoryMedians = calculateCategoryMedians();
+
+            mockProducts.forEach(product => {
+                // Calculate new deal score
+                product.dealScore = calculateDealScore(product, categoryMedians);
+
+                // Assign deal label
+                product.dealLabel = assignDealLabel(product, product.dealScore);
+            });
+        }
+
+        // Apply deal rankings to all products
+        applyDealRankings();
+
         let currentProducts = [...mockProducts];
         let currentSearchTerm = '';
 
@@ -2210,6 +2385,16 @@ LAST UPDATED: 2024-11-21
 
                     <div class="product-brand">${product.brand}</div>
                     <div class="product-title">${product.title}</div>
+
+                    ${product.dealLabel ? `
+                        <div style="background: ${product.dealLabel.color}; color: white; padding: 10px 15px; border-radius: 8px; margin: 10px 0; text-align: center; font-weight: 700; font-size: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                            <span style="font-size: 1.3rem; margin-right: 6px;">${product.dealLabel.emoji}</span>
+                            ${product.dealLabel.text}
+                            <div style="font-size: 0.75rem; font-weight: 500; margin-top: 4px; opacity: 0.95;">
+                                ${product.dealLabel.description}
+                            </div>
+                        </div>
+                    ` : ''}
 
                     <div class="price-section">
                         <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px;">
@@ -2245,8 +2430,9 @@ LAST UPDATED: 2024-11-21
                     </div>
 
                     <div class="scores">
-                        <span class="score">💎 Gem: ${product.hiddenGemScore}/100</span>
-                        <span class="score">⭐ Deal: ${product.dealScore}/100</span>
+                        <span class="score" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 12px; border-radius: 6px;">
+                            ⭐ Deal Score: ${product.dealScore}/100
+                        </span>
                     </div>
 
                     ${product.subscribeSave > 0 ? `<div style="font-size: 0.85rem; color: #667eea; margin-top: 10px;">📦 Subscribe & Save ${product.subscribeSave}%</div>` : ''}
@@ -2697,6 +2883,16 @@ LAST UPDATED: 2024-11-21
             content.innerHTML = productsToCompare.map(product => `
                 <div class="comparison-card">
                     <h4>${product.brand} - ${product.title.substring(0, 50)}...</h4>
+
+                    ${product.dealLabel ? `
+                        <div style="background: ${product.dealLabel.color}; color: white; padding: 12px 15px; border-radius: 8px; margin: 15px 0; text-align: center; font-weight: 700; font-size: 1.1rem; box-shadow: 0 3px 10px rgba(0,0,0,0.25);">
+                            <span style="font-size: 1.5rem; margin-right: 8px;">${product.dealLabel.emoji}</span>
+                            ${product.dealLabel.text}
+                            <div style="font-size: 0.8rem; font-weight: 500; margin-top: 5px; opacity: 0.95;">
+                                Deal Score: ${product.dealScore}/100 - ${product.dealLabel.description}
+                            </div>
+                        </div>
+                    ` : ''}
 
                     <div class="comparison-detail">
                         <strong>Category</strong>
