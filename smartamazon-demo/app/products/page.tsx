@@ -4,9 +4,11 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { getProducts } from '@/lib/initializeProducts';
 import { Product, FilterState } from '@/lib/types';
 import { parseNaturalLanguageQuery, getParsedQuerySummary, ParsedQuery } from '@/lib/nluSearch';
+import { getRecommendationsFromMultiple, RecommendedProduct } from '@/lib/recommendations';
 import { ProductCard } from '@/components/ProductCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
 import { ComparisonPanel } from '@/components/ComparisonPanel';
+import { Recommendations } from '@/components/Recommendations';
 
 export default function ProductsPage() {
   const allProducts = getProducts();
@@ -169,6 +171,14 @@ export default function ProductsPage() {
     return allProducts.filter(p => comparisonIds.includes(p.id));
   }, [allProducts, comparisonIds]);
 
+  // Get recommendations based on comparison products
+  const recommendations = useMemo(() => {
+    if (comparisonProducts.length === 0) {
+      return [];
+    }
+    return getRecommendationsFromMultiple(comparisonProducts, allProducts, 6);
+  }, [comparisonProducts, allProducts]);
+
   // Toggle product in comparison
   const handleToggleComparison = (productId: number) => {
     if (comparisonIds.includes(productId)) {
@@ -286,6 +296,15 @@ export default function ProductsPage() {
             )}
           </div>
         </div>
+
+        {/* Recommendations Panel */}
+        {recommendations.length > 0 && comparisonProducts.length > 0 && (
+          <Recommendations
+            sourceProduct={comparisonProducts[0]}
+            recommendations={recommendations}
+            onAddToComparison={handleToggleComparison}
+          />
+        )}
 
         {/* Comparison Panel */}
         <ComparisonPanel
