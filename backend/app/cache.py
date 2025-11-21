@@ -1,10 +1,11 @@
 """
 Redis caching service for SmartAmazon API
 
-Provides caching with automatic expiration, cache warming, and cache invalidation
+Provides caching with automatic expiration, cache warming, and cache invalidation.
+Falls back to in-memory cache when Redis is unavailable (demo mode).
 """
 import json
-import redis
+import time
 from typing import Any, Optional, Callable
 from functools import wraps
 import hashlib
@@ -14,13 +15,53 @@ import os
 from .logging_config import get_logger
 from .exceptions import CacheError
 
+# Try to import redis, but don't fail if unavailable
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
 
 logger = get_logger(__name__)
 
 
+class InMemoryCache:
+    """Simple in-memory cache fallback for demo mode"""
+
+    def __init__(self):
+        self._cache = {}
+        self._expiry = {}
+
+    def get(self, key: str) -> Optional[Any]:
+        if key in self._cache:
+            if self._expiry.get(key, float('inf')) > time.time():
+                return self._cache[key]
+            else:
+                del self._cache[key]
+                del self._expiry[key]
+        return None
+
+    def set(self, key: str, value: Any, expiration: int = 900) -> bool:
+        self._cache[key] = value
+        self._expiry[key] = time.time() + expiration
+        return True
+
+    def delete(self, key: str) -> bool:
+        self._cache.pop(key, None)
+        self._expiry.pop(key, None)
+        return True
+
+    def clear(self) -> bool:
+        self._cache.clear()
+        self._expiry.clear()
+        return True
+
+
 class CacheService:
     """
-    Redis-based caching service with automatic expiration
+    Redis-based caching service with automatic expiration.
+    Falls back to in-memory cache when Redis is unavailable.
     """
 
     def __init__(self, redis_url: str = None):
@@ -31,19 +72,29 @@ class CacheService:
             redis_url: Redis connection URL
         """
         self.redis_url = redis_url or os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        self.client = None
+        self._memory_cache = InMemoryCache()
+        self._use_memory = False
+
+        if not REDIS_AVAILABLE:
+            logger.warning("Redis module not installed - using in-memory cache (demo mode)")
+            self._use_memory = True
+            return
+
         try:
             self.client = redis.from_url(
                 self.redis_url,
                 decode_responses=True,
-                socket_connect_timeout=5,
+                socket_connect_timeout=2,
                 socket_keepalive=True
             )
             # Test connection
             self.client.ping()
             logger.info("Redis cache connected successfully")
-        except redis.ConnectionError as e:
-            logger.error(f"Failed to connect to Redis: {e}")
+        except Exception as e:
+            logger.warning(f"Redis unavailable ({e}) - using in-memory cache (demo mode)")
             self.client = None
+            self._use_memory = True
 
     def is_available(self) -> bool:
         """
@@ -52,12 +103,14 @@ class CacheService:
         Returns:
             True if cache is available, False otherwise
         """
+        if self._use_memory:
+            return True
         if not self.client:
             return False
         try:
             self.client.ping()
             return True
-        except redis.ConnectionError:
+        except Exception:
             return False
 
     def get(self, key: str) -> Optional[Any]:
@@ -70,6 +123,12 @@ class CacheService:
         Returns:
             Cached value or None if not found
         """
+        if self._use_memory:
+            value = self._memory_cache.get(key)
+            if value is not None:
+                logger.debug(f"Cache hit (memory): {key}")
+            return value
+
         if not self.is_available():
             return None
 
@@ -102,6 +161,9 @@ class CacheService:
         Returns:
             True if successful, False otherwise
         """
+        if self._use_memory:
+            return self._memory_cache.set(key, value, expiration)
+
         if not self.is_available():
             return False
 
@@ -124,6 +186,9 @@ class CacheService:
         Returns:
             True if successful, False otherwise
         """
+        if self._use_memory:
+            return self._memory_cache.delete(key)
+
         if not self.is_available():
             return False
 
@@ -145,6 +210,16 @@ class CacheService:
         Returns:
             Number of keys deleted
         """
+        if self._use_memory:
+            # Simple pattern matching for in-memory cache
+            import fnmatch
+            deleted = 0
+            keys_to_delete = [k for k in self._memory_cache._cache.keys() if fnmatch.fnmatch(k, pattern)]
+            for k in keys_to_delete:
+                self._memory_cache.delete(k)
+                deleted += 1
+            return deleted
+
         if not self.is_available():
             return 0
 
@@ -166,6 +241,11 @@ class CacheService:
         Returns:
             True if successful, False otherwise
         """
+        if self._use_memory:
+            self._memory_cache.clear()
+            logger.warning("All cache cleared (memory)")
+            return True
+
         if not self.is_available():
             return False
 
@@ -188,6 +268,12 @@ class CacheService:
         Returns:
             New value or None if failed
         """
+        if self._use_memory:
+            current = self._memory_cache.get(key) or 0
+            new_val = current + amount
+            self._memory_cache.set(key, new_val, 3600)
+            return new_val
+
         if not self.is_available():
             return None
 
@@ -204,6 +290,14 @@ class CacheService:
         Returns:
             Dictionary with cache statistics
         """
+        if self._use_memory:
+            return {
+                "status": "available",
+                "type": "in-memory",
+                "keys": len(self._memory_cache._cache),
+                "note": "Demo mode - using in-memory cache"
+            }
+
         if not self.is_available():
             return {"status": "unavailable"}
 
@@ -211,6 +305,7 @@ class CacheService:
             info = self.client.info('stats')
             return {
                 "status": "available",
+                "type": "redis",
                 "total_commands": info.get('total_commands_processed', 0),
                 "keyspace_hits": info.get('keyspace_hits', 0),
                 "keyspace_misses": info.get('keyspace_misses', 0),
