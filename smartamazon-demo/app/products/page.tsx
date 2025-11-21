@@ -1,14 +1,22 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { getProducts } from '@/lib/initializeProducts';
 import { Product, FilterState } from '@/lib/types';
 import { parseNaturalLanguageQuery, getParsedQuerySummary, ParsedQuery } from '@/lib/nluSearch';
 import { getRecommendationsFromMultiple, RecommendedProduct } from '@/lib/recommendations';
+import {
+  getPriceAlerts,
+  isProductTracked,
+  toggleTracking,
+  simulatePriceDropEvents,
+  PriceAlert
+} from '@/lib/priceAlerts';
 import { ProductCard } from '@/components/ProductCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
 import { ComparisonPanel } from '@/components/ComparisonPanel';
 import { Recommendations } from '@/components/Recommendations';
+import { PriceAlerts, AlertBadge } from '@/components/PriceAlerts';
 
 export default function ProductsPage() {
   const allProducts = getProducts();
@@ -26,6 +34,51 @@ export default function ProductsPage() {
     minRating: 0
   });
   const [comparisonIds, setComparisonIds] = useState<number[]>([]);
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [trackedProductIds, setTrackedProductIds] = useState<Set<number>>(new Set());
+
+  // Initialize alerts and simulate price drops on mount
+  useEffect(() => {
+    setAlerts(getPriceAlerts());
+    // Build set of tracked product IDs
+    const tracked = new Set<number>();
+    allProducts.forEach(p => {
+      if (isProductTracked(p.id)) tracked.add(p.id);
+    });
+    setTrackedProductIds(tracked);
+
+    // Simulate price drops every 30 seconds (for demo purposes)
+    const interval = setInterval(() => {
+      const newAlerts = simulatePriceDropEvents(allProducts);
+      if (newAlerts.length > 0) {
+        setAlerts(getPriceAlerts());
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [allProducts]);
+
+  // Handle tracking toggle
+  const handleToggleTracking = useCallback((productId: number) => {
+    const product = allProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    const nowTracking = toggleTracking(productId, product.currentPrice);
+    setTrackedProductIds(prev => {
+      const next = new Set(prev);
+      if (nowTracking) {
+        next.add(productId);
+      } else {
+        next.delete(productId);
+      }
+      return next;
+    });
+  }, [allProducts]);
+
+  // Refresh alerts
+  const refreshAlerts = useCallback(() => {
+    setAlerts(getPriceAlerts());
+  }, []);
 
   // Handle search submission with NLU parsing
   const handleSearch = useCallback((query: string) => {
@@ -266,6 +319,11 @@ export default function ProductsPage() {
           )}
         </header>
 
+        {/* Price Alerts Panel */}
+        {alerts.length > 0 && (
+          <PriceAlerts alerts={alerts} onRefresh={refreshAlerts} />
+        )}
+
         {/* Main Content */}
         <div className="flex gap-6 items-start">
           {/* Sidebar */}
@@ -290,6 +348,8 @@ export default function ProductsPage() {
                     product={product}
                     isSelected={comparisonIds.includes(product.id)}
                     onToggleComparison={handleToggleComparison}
+                    isTracking={trackedProductIds.has(product.id)}
+                    onToggleTracking={handleToggleTracking}
                   />
                 ))}
               </div>

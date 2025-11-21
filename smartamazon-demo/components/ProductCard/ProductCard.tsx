@@ -3,14 +3,17 @@
 import React from 'react';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
+import { TrackPriceButton } from '@/components/PriceAlerts';
 
 interface ProductCardProps {
   product: Product;
   isSelected: boolean;
   onToggleComparison: (productId: number) => void;
+  isTracking?: boolean;
+  onToggleTracking?: (productId: number) => void;
 }
 
-export function ProductCard({ product, isSelected, onToggleComparison }: ProductCardProps) {
+export function ProductCard({ product, isSelected, onToggleComparison, isTracking = false, onToggleTracking }: ProductCardProps) {
   return (
     <div
       className={`
@@ -180,6 +183,16 @@ export function ProductCard({ product, isSelected, onToggleComparison }: Product
           <div className="text-sm text-orange-600 font-bold mt-2">
             You save ${product.bulkSavings?.toFixed(2)} ({product.bulkSavingsPercent}%) by buying in bulk!
           </div>
+        </div>
+      )}
+
+      {/* Track Price Button */}
+      {onToggleTracking && (
+        <div className="mt-4">
+          <TrackPriceButton
+            isTracking={isTracking}
+            onToggle={() => onToggleTracking(product.id)}
+          />
         </div>
       )}
     </div>
