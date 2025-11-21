@@ -19,12 +19,18 @@ import { FilterSidebar } from '@/components/FilterSidebar';
 import { ComparisonPanel } from '@/components/ComparisonPanel';
 import { Recommendations } from '@/components/Recommendations';
 import { PriceAlerts, AlertBadge } from '@/components/PriceAlerts';
+import { useToast } from '@/components/Toast';
+import { LoadingSkeleton } from '@/components/ui/LoadingState';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function ProductsPage() {
+  const { showToast } = useToast();
+
   // Loading and error states
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,6 +78,7 @@ export default function ProductsPage() {
     } catch (err) {
       console.error('Failed to load products:', err);
       setError('Failed to load products. Please try again later.');
+      showToast('Failed to load products. Check your connection.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -316,11 +323,13 @@ export default function ProductsPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading products...</h2>
-          <p className="text-gray-600">Fetching the best deals for you</p>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading products...</h2>
+            <p className="text-gray-600">Fetching the best deals for you</p>
+          </div>
+          <LoadingSkeleton count={6} />
         </div>
       </div>
     );
@@ -346,44 +355,46 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-purple-800 mb-4">
+        <header className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-purple-800 mb-2 md:mb-4">
             SmartAmazon Search & Deal Intelligence
           </h1>
-          <p className="text-lg text-gray-600 mb-6">
+          <p className="text-sm md:text-lg text-gray-600 mb-4 md:mb-6">
             Find true deals with intelligent price analysis | {allProducts.length} products loaded
           </p>
 
           {/* Smart Search Bar */}
-          <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
-            <div className="flex items-center gap-4">
+          <div className="bg-white rounded-xl shadow-lg p-3 md:p-4 mb-4 md:mb-6">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
               <div className="flex-1 relative">
                 <input
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchInput)}
-                  placeholder='Try: "best protein powder under $40" or "hidden gem electronics"'
-                  className="w-full px-4 py-3 pr-24 text-lg border-2 border-purple-200 rounded-lg focus:outline-none focus:border-purple-500 transition-colors"
+                  placeholder='Try: "protein under $40" or "hidden gem"'
+                  className="w-full px-4 py-3 text-base md:text-lg border-2 border-purple-200 rounded-lg focus:outline-none focus:border-purple-500 transition-colors"
                 />
+              </div>
+              <div className="flex gap-2">
                 <button
                   onClick={() => handleSearch(searchInput)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-purple-600 to-purple-800 text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                  className="flex-1 md:flex-none bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 md:px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
                 >
-                  Smart Search
+                  Search
                 </button>
+                {parsedQuery && (
+                  <button
+                    onClick={clearNluFilters}
+                    className="px-4 py-2 text-purple-600 border-2 border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
-              {parsedQuery && (
-                <button
-                  onClick={clearNluFilters}
-                  className="px-4 py-2 text-purple-600 border-2 border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
-                >
-                  Clear
-                </button>
-              )}
             </div>
 
             {/* NLU Summary Banner */}
@@ -397,25 +408,32 @@ export default function ProductsPage() {
             )}
           </div>
 
-          {/* Results Count + Sort */}
-          <div className="flex items-center justify-between">
-            <div className="text-gray-600">
-              Showing <span className="font-bold text-purple-600">{filteredProducts.length}</span> of{' '}
-              <span className="font-bold">{totalProducts}</span> products
-              {totalPages > 1 && (
-                <span className="ml-2">
-                  (Page {currentPage} of {totalPages})
-                </span>
-              )}
+          {/* Results Count + Sort + Mobile Filters Toggle */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {/* Mobile filter toggle */}
+              <button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className="lg:hidden px-3 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium"
+              >
+                Filters
+              </button>
+              <div className="text-sm md:text-base text-gray-600">
+                <span className="font-bold text-purple-600">{filteredProducts.length}</span> of{' '}
+                <span className="font-bold">{totalProducts}</span> products
+                {totalPages > 1 && (
+                  <span className="hidden sm:inline ml-2">(Page {currentPage}/{totalPages})</span>
+                )}
+              </div>
             </div>
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-2">
-              <label className="text-gray-600 font-medium">Sort by:</label>
+              <label className="text-gray-600 font-medium text-sm hidden sm:inline">Sort:</label>
               <select
                 value={sortBy}
                 onChange={(e) => handleSortChange(e.target.value)}
-                className="px-4 py-2 border-2 border-purple-200 rounded-lg bg-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                className="px-3 py-2 text-sm border-2 border-purple-200 rounded-lg bg-white focus:outline-none focus:border-purple-500 cursor-pointer"
               >
                 {Object.entries(SORT_OPTIONS).map(([key, { label, value }]) => (
                   <option key={key} value={value}>
@@ -433,24 +451,23 @@ export default function ProductsPage() {
         )}
 
         {/* Main Content */}
-        <div className="flex gap-6 items-start">
-          {/* Sidebar */}
-          <div className="w-72 flex-shrink-0">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start">
+          {/* Sidebar - Hidden on mobile unless toggled */}
+          <div className={`w-full lg:w-72 flex-shrink-0 ${showMobileFilters ? 'block' : 'hidden lg:block'}`}>
             <FilterSidebar filters={filters} onFiltersChange={setFilters} />
           </div>
 
           {/* Products Grid */}
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             {filteredProducts.length === 0 ? (
-              <div className="bg-white rounded-xl p-12 text-center shadow-md">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">No products found</h3>
-                <p className="text-gray-600">
-                  Try adjusting your filters or search term
-                </p>
-              </div>
+              <EmptyState
+                title="No products found"
+                description="Try adjusting your filters or search term"
+                icon="search"
+                action={{ label: 'Clear Filters', onClick: clearNluFilters }}
+              />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                 {filteredProducts.map(product => (
                   <ProductCard
                     key={product.id}
@@ -466,37 +483,37 @@ export default function ProductsPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-4">
+              <div className="mt-6 md:mt-8 flex flex-wrap items-center justify-center gap-2 md:gap-4">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  className={`px-4 md:px-6 py-2 md:py-3 rounded-lg font-semibold text-sm md:text-base transition-colors ${
                     currentPage === 1
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-purple-600 text-white hover:bg-purple-700'
                   }`}
                 >
-                  Previous
+                  Prev
                 </button>
 
-                <div className="flex items-center gap-2">
-                  {/* Page numbers */}
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                <div className="flex items-center gap-1 md:gap-2">
+                  {/* Page numbers - show fewer on mobile */}
+                  {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
                     let pageNum;
-                    if (totalPages <= 5) {
+                    if (totalPages <= 3) {
                       pageNum = i + 1;
-                    } else if (currentPage <= 3) {
+                    } else if (currentPage <= 2) {
                       pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
+                    } else if (currentPage >= totalPages - 1) {
+                      pageNum = totalPages - 2 + i;
                     } else {
-                      pageNum = currentPage - 2 + i;
+                      pageNum = currentPage - 1 + i;
                     }
                     return (
                       <button
                         key={pageNum}
                         onClick={() => handlePageChange(pageNum)}
-                        className={`w-10 h-10 rounded-lg font-semibold transition-colors ${
+                        className={`w-8 h-8 md:w-10 md:h-10 rounded-lg font-semibold text-sm md:text-base transition-colors ${
                           currentPage === pageNum
                             ? 'bg-purple-600 text-white'
                             : 'bg-white text-purple-600 border-2 border-purple-200 hover:bg-purple-50'
@@ -511,7 +528,7 @@ export default function ProductsPage() {
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  className={`px-4 md:px-6 py-2 md:py-3 rounded-lg font-semibold text-sm md:text-base transition-colors ${
                     currentPage === totalPages
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-purple-600 text-white hover:bg-purple-700'
