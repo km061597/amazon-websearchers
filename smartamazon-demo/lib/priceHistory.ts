@@ -22,30 +22,26 @@ export function generatePriceHistory(
   currentPrice: number,
   listPrice: number
 ): PriceHistoryEntry[] {
-  const monthNames = [
-    'Jun 2024',
-    'Jul 2024',
-    'Aug 2024',
-    'Sep 2024',
-    'Oct 2024',
-    'Nov 2024'
-  ];
-
   const history: PriceHistoryEntry[] = [];
   const priceRange = listPrice - currentPrice;
   const baseVariation = priceRange * 0.15; // 15% variation
+  const today = new Date();
 
-  for (let i = 0; i < 6; i++) {
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+
     let price: number;
 
-    if (i === 5) {
-      // Last month is current price
+    if (i === 0) {
+      // Today is current price
       price = currentPrice;
     } else {
       // Trending down from list price to current price
-      const trendFactor = (5 - i) / 5; // 1.0 at month 0, 0.2 at month 4
+      const trendFactor = i / 29;
       const randomVariation = (Math.random() - 0.5) * baseVariation;
-      price = currentPrice + (priceRange * trendFactor * 0.7) + randomVariation;
+      price = currentPrice + (priceRange * trendFactor * 0.5) + randomVariation;
 
       // Keep prices within reasonable bounds
       price = Math.max(
@@ -55,7 +51,7 @@ export function generatePriceHistory(
     }
 
     history.push({
-      month: monthNames[i],
+      date: dateStr,
       price: parseFloat(price.toFixed(2))
     });
   }

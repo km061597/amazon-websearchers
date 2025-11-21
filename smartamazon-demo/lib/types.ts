@@ -4,7 +4,7 @@
  */
 
 export interface PriceHistoryEntry {
-  month: string;
+  date: string;
   price: number;
 }
 
@@ -17,14 +17,15 @@ export interface DealLabel {
 
 export interface Product {
   id: number;
-  asin: string;
+  asin?: string;
+  amazonUrl?: string;
   title: string;
   brand: string;
-  category: 'Grocery' | 'Electronics' | 'Home & Kitchen' | 'Health & Personal Care' | 'Sports & Outdoors';
+  category: string;
   currentPrice: number;
   listPrice: number;
   unitPrice: number;
-  unitType: 'oz' | 'lb' | 'g' | 'kg' | 'each';
+  unitType: string;
   weight: string;
   discount: number;
   rating: number;

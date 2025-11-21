@@ -36,7 +36,7 @@ interface PriceChartProps {
 export function PriceChart({ product, height = 250 }: PriceChartProps) {
   const chartRef = useRef<ChartJS<'line'>>(null);
 
-  const labels = product.priceHistory.map(h => h.month);
+  const labels = product.priceHistory.map(h => h.date);
   const prices = product.priceHistory.map(h => h.price);
 
   const data = {

@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { getProducts } from '@/lib/initializeProducts';
 import { Product, FilterState } from '@/lib/types';
+import { fetchProducts } from '@/lib/api';
+import { applyDealRankings } from '@/lib/dealRanking';
+import { applyBulkSavings } from '@/lib/bulkSavings';
 import { parseNaturalLanguageQuery, getParsedQuerySummary, ParsedQuery } from '@/lib/nluSearch';
 import { getRecommendationsFromMultiple, RecommendedProduct } from '@/lib/recommendations';
 import {
@@ -19,7 +21,10 @@ import { Recommendations } from '@/components/Recommendations';
 import { PriceAlerts, AlertBadge } from '@/components/PriceAlerts';
 
 export default function ProductsPage() {
-  const allProducts = getProducts();
+  // Loading and error states
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
 
   const [searchInput, setSearchInput] = useState('');
   const [parsedQuery, setParsedQuery] = useState<ParsedQuery | null>(null);
@@ -37,9 +42,38 @@ export default function ProductsPage() {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [trackedProductIds, setTrackedProductIds] = useState<Set<number>>(new Set());
 
-  // Initialize alerts and simulate price drops on mount
+  // Fetch products from API on mount
   useEffect(() => {
+    async function loadProducts() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch from backend API
+        const products = await fetchProducts();
+
+        // Apply deal ranking and bulk savings processing
+        let processedProducts = applyBulkSavings(products);
+        processedProducts = applyDealRankings(processedProducts);
+
+        setAllProducts(processedProducts);
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        setError('Failed to load products. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadProducts();
+  }, []);
+
+  // Initialize alerts after products load
+  useEffect(() => {
+    if (allProducts.length === 0) return;
+
     setAlerts(getPriceAlerts());
+
     // Build set of tracked product IDs
     const tracked = new Set<number>();
     allProducts.forEach(p => {
@@ -188,9 +222,6 @@ export default function ProductsPage() {
         if (parsedQuery.requireGoodValue && product.dealLabel?.text !== 'GOOD VALUE') {
           return false;
         }
-
-        // Bulk savings preference (boost, not filter)
-        // This will be handled in sorting
       }
 
       return true;
@@ -205,7 +236,6 @@ export default function ProductsPage() {
       } else if (parsedQuery.preferDealScore || parsedQuery.requireTopDeal) {
         results = results.sort((a, b) => b.dealScore - a.dealScore);
       } else if (parsedQuery.preferBulkSavings) {
-        // Sort bulk savings products first
         results = results.sort((a, b) => {
           if (a.isMultiPack && !b.isMultiPack) return -1;
           if (!a.isMultiPack && b.isMultiPack) return 1;
@@ -250,71 +280,100 @@ export default function ProductsPage() {
     setComparisonIds(comparisonIds.filter(id => id !== productId));
   };
 
-  // Close comparison panel
-  const handleCloseComparison = () => {
+  // Clear comparison
+  const handleClearComparison = () => {
     setComparisonIds([]);
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading products...</h2>
+          <p className="text-gray-600">Fetching the best deals for you</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-xl shadow-lg max-w-md">
+          <div className="text-red-500 text-6xl mb-4">!</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Oops! Something went wrong</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 p-5">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <header className="bg-white rounded-xl p-6 mb-8 shadow-lg">
-          <h1 className="text-purple-600 text-4xl font-bold mb-2">
-            SmartAmazon Search
+        <header className="mb-8">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-purple-800 mb-4">
+            SmartAmazon Search & Deal Intelligence
           </h1>
-          <p className="text-gray-600 text-lg mb-6">
-            Intelligent Deal Discovery & Price Comparison
+          <p className="text-lg text-gray-600 mb-6">
+            Find true deals with intelligent price analysis | {allProducts.length} products loaded
           </p>
 
-          {/* Stats */}
-          <div className="flex gap-4 flex-wrap mb-6">
-            <div className="bg-purple-50 px-6 py-3 rounded-lg font-semibold text-purple-600">
-              Total Products: {filteredProducts.length}
+          {/* Smart Search Bar */}
+          <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchInput)}
+                  placeholder='Try: "best protein powder under $40" or "hidden gem electronics"'
+                  className="w-full px-4 py-3 pr-24 text-lg border-2 border-purple-200 rounded-lg focus:outline-none focus:border-purple-500 transition-colors"
+                />
+                <button
+                  onClick={() => handleSearch(searchInput)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-purple-600 to-purple-800 text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Smart Search
+                </button>
+              </div>
+              {parsedQuery && (
+                <button
+                  onClick={clearNluFilters}
+                  className="px-4 py-2 text-purple-600 border-2 border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
             </div>
-            <div className="bg-purple-50 px-6 py-3 rounded-lg font-semibold text-purple-600">
-              Categories: 5
-            </div>
-            <div className="bg-purple-50 px-6 py-3 rounded-lg font-semibold text-purple-600">
-              Comparing: {comparisonIds.length}
-            </div>
-          </div>
 
-          {/* Search Bar with NLU */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder='Try: "best protein under $40" or "hidden gem electronics"'
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchInput)}
-              className="w-full px-6 py-4 pr-24 text-lg border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none shadow-sm"
-            />
-            <button
-              onClick={() => handleSearch(searchInput)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
-            >
-              🔍 Search
-            </button>
-          </div>
-
-          {/* NLU Summary Banner */}
-          {nluSummary && (
-            <div className="mt-4 p-4 bg-purple-100 border-2 border-purple-300 rounded-xl flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold text-purple-800 mb-1">
-                  🧠 Smart Search Applied:
-                </div>
-                <div className="text-sm text-purple-700">
-                  {nluSummary}
+            {/* NLU Summary Banner */}
+            {nluSummary && (
+              <div className="mt-4 bg-gradient-to-r from-purple-100 to-purple-50 p-4 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-purple-600 font-bold">Smart Search Applied:</span>
+                  <span className="text-gray-700">{nluSummary}</span>
                 </div>
               </div>
-              <button
-                onClick={clearNluFilters}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
-              >
-                Clear
-              </button>
+            )}
+          </div>
+
+          {/* Results Count */}
+          {filteredProducts.length !== allProducts.length && (
+            <div className="text-gray-600">
+              Showing <span className="font-bold text-purple-600">{filteredProducts.length}</span> of{' '}
+              <span className="font-bold">{allProducts.length}</span> products
             </div>
           )}
         </header>
@@ -334,9 +393,10 @@ export default function ProductsPage() {
           {/* Products Grid */}
           <div className="flex-1">
             {filteredProducts.length === 0 ? (
-              <div className="bg-white rounded-xl p-12 text-center shadow-lg">
-                <p className="text-2xl text-gray-500 mb-2">No products found</p>
-                <p className="text-gray-400">
+              <div className="bg-white rounded-xl p-12 text-center shadow-md">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">No products found</h3>
+                <p className="text-gray-600">
                   Try adjusting your filters or search term
                 </p>
               </div>
@@ -357,21 +417,25 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Recommendations Panel */}
+        {/* Recommendations Panel (shows when products are in comparison) */}
         {recommendations.length > 0 && comparisonProducts.length > 0 && (
-          <Recommendations
-            sourceProduct={comparisonProducts[0]}
-            recommendations={recommendations}
-            onAddToComparison={handleToggleComparison}
-          />
+          <div className="mt-8">
+            <Recommendations
+              sourceProduct={comparisonProducts[0]}
+              recommendations={recommendations}
+              onAddToComparison={handleToggleComparison}
+            />
+          </div>
         )}
 
-        {/* Comparison Panel */}
-        <ComparisonPanel
-          products={comparisonProducts}
-          onRemove={handleRemoveFromComparison}
-          onClose={handleCloseComparison}
-        />
+        {/* Comparison Panel (fixed at bottom when products selected) */}
+        {comparisonProducts.length > 0 && (
+          <ComparisonPanel
+            products={comparisonProducts}
+            onRemove={handleRemoveFromComparison}
+            onClose={handleClearComparison}
+          />
+        )}
       </div>
     </div>
   );
