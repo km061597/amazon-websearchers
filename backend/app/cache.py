@@ -342,16 +342,27 @@ def cache_key(*args, **kwargs) -> str:
     Generate cache key from arguments
 
     Args:
-        *args: Positional arguments
+        *args: Positional arguments (first arg is prefix like 'search')
         **kwargs: Keyword arguments
 
     Returns:
         Cache key string
     """
-    # Create a consistent string representation
-    key_data = f"{args}:{sorted(kwargs.items())}"
-    # Hash it for consistent length
-    return hashlib.md5(key_data.encode()).hexdigest()
+    prefix = args[0] if args else "cache"
+    remaining_args = args[1:] if len(args) > 1 else ()
+
+    # Create readable key with prefix
+    key_parts = [f"smartamazon:{prefix}"]
+
+    # Add remaining positional args
+    for arg in remaining_args:
+        key_parts.append(str(arg))
+
+    # Add sorted kwargs for consistency
+    for k, v in sorted(kwargs.items()):
+        key_parts.append(f"{k}={v}")
+
+    return ":".join(key_parts)
 
 
 def cached(
