@@ -1,0 +1,39 @@
+# SmartAmazon Root .gitignore
+
+# Database files (SQLite)
+*.db
+*.sqlite
+*.sqlite3
+smartamazon.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/tmp/
+
+# Node
+node_modules/
+
+# Environment files
+.env.local
+.env.*.local
