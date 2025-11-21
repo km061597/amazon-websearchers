@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Product, FilterState } from '@/lib/types';
-import { fetchProducts } from '@/lib/api';
+import { fetchProducts, SORT_OPTIONS, PaginatedProducts } from '@/lib/api';
 import { applyDealRankings } from '@/lib/dealRanking';
 import { applyBulkSavings } from '@/lib/bulkSavings';
 import { parseNaturalLanguageQuery, getParsedQuerySummary, ParsedQuery } from '@/lib/nluSearch';
@@ -26,6 +26,13 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [sortBy, setSortBy] = useState('hidden_gem_desc');
+  const ITEMS_PER_PAGE = 20;
+
   const [searchInput, setSearchInput] = useState('');
   const [parsedQuery, setParsedQuery] = useState<ParsedQuery | null>(null);
   const [nluSummary, setNluSummary] = useState('');
@@ -42,31 +49,52 @@ export default function ProductsPage() {
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [trackedProductIds, setTrackedProductIds] = useState<Set<number>>(new Set());
 
-  // Fetch products from API on mount
-  useEffect(() => {
-    async function loadProducts() {
-      setIsLoading(true);
-      setError(null);
+  // Fetch products from API
+  const loadProducts = useCallback(async (page: number, sort: string) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        // Fetch from backend API
-        const products = await fetchProducts();
+    try {
+      const result = await fetchProducts({
+        page,
+        limit: ITEMS_PER_PAGE,
+        sort,
+      });
 
-        // Apply deal ranking and bulk savings processing
-        let processedProducts = applyBulkSavings(products);
-        processedProducts = applyDealRankings(processedProducts);
+      // Apply deal ranking and bulk savings processing
+      let processedProducts = applyBulkSavings(result.products);
+      processedProducts = applyDealRankings(processedProducts);
 
-        setAllProducts(processedProducts);
-      } catch (err) {
-        console.error('Failed to load products:', err);
-        setError('Failed to load products. Please try again later.');
-      } finally {
-        setIsLoading(false);
-      }
+      setAllProducts(processedProducts);
+      setTotalPages(result.pages);
+      setTotalProducts(result.total);
+      setCurrentPage(result.page);
+    } catch (err) {
+      console.error('Failed to load products:', err);
+      setError('Failed to load products. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
-
-    loadProducts();
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadProducts(1, sortBy);
+  }, []);
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      loadProducts(newPage, sortBy);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Handle sort change
+  const handleSortChange = (newSort: string) => {
+    setSortBy(newSort);
+    loadProducts(1, newSort);
+  };
 
   // Initialize alerts after products load
   useEffect(() => {
@@ -369,13 +397,34 @@ export default function ProductsPage() {
             )}
           </div>
 
-          {/* Results Count */}
-          {filteredProducts.length !== allProducts.length && (
+          {/* Results Count + Sort */}
+          <div className="flex items-center justify-between">
             <div className="text-gray-600">
               Showing <span className="font-bold text-purple-600">{filteredProducts.length}</span> of{' '}
-              <span className="font-bold">{allProducts.length}</span> products
+              <span className="font-bold">{totalProducts}</span> products
+              {totalPages > 1 && (
+                <span className="ml-2">
+                  (Page {currentPage} of {totalPages})
+                </span>
+              )}
             </div>
-          )}
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2">
+              <label className="text-gray-600 font-medium">Sort by:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="px-4 py-2 border-2 border-purple-200 rounded-lg bg-white focus:outline-none focus:border-purple-500 cursor-pointer"
+              >
+                {Object.entries(SORT_OPTIONS).map(([key, { label, value }]) => (
+                  <option key={key} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </header>
 
         {/* Price Alerts Panel */}
@@ -412,6 +461,64 @@ export default function ProductsPage() {
                     onToggleTracking={handleToggleTracking}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    currentPage === 1
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                  }`}
+                >
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {/* Page numbers */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-10 h-10 rounded-lg font-semibold transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white text-purple-600 border-2 border-purple-200 hover:bg-purple-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    currentPage === totalPages
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                  }`}
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>

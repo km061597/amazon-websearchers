@@ -42,6 +42,17 @@ interface SearchResponse {
   pages: number;
   sponsored_hidden: number;
   query: string;
+  sort?: string;
+  limit?: number;
+}
+
+export interface PaginatedProducts {
+  products: Product[];
+  total: number;
+  page: number;
+  pages: number;
+  sort: string;
+  limit: number;
 }
 
 interface PriceHistoryPoint {
@@ -135,22 +146,53 @@ function generatePriceHistory(currentPrice: number, listPrice: number): { date: 
 }
 
 /**
- * Fetch all products (searches with broad query)
+ * Sort options mapping
  */
-export async function fetchProducts(query: string = ''): Promise<Product[]> {
-  try {
-    // Use a broad search if no query provided
-    const searchQuery = query || 'product';
-    const url = `${API_BASE_URL}/search?q=${encodeURIComponent(searchQuery)}&hide_sponsored=false&limit=100`;
+export const SORT_OPTIONS = {
+  deal_desc: { label: 'Best Deals', value: 'hidden_gem_desc' },
+  price_asc: { label: 'Lowest Price', value: 'price_asc' },
+  price_desc: { label: 'Highest Price', value: 'price_desc' },
+  rating_desc: { label: 'Highest Rating', value: 'rating_desc' },
+  discount_desc: { label: 'Biggest Discount', value: 'discount_desc' },
+} as const;
 
-    const response = await fetch(url);
+export type SortKey = keyof typeof SORT_OPTIONS;
+
+/**
+ * Fetch products with pagination and sorting
+ */
+export async function fetchProducts(options: {
+  query?: string;
+  page?: number;
+  limit?: number;
+  sort?: string;
+} = {}): Promise<PaginatedProducts> {
+  try {
+    const { query = 'product', page = 1, limit = 20, sort = 'hidden_gem_desc' } = options;
+
+    const params = new URLSearchParams();
+    params.set('q', query);
+    params.set('page', page.toString());
+    params.set('limit', limit.toString());
+    params.set('sort', sort);
+    params.set('hide_sponsored', 'false');
+
+    const response = await fetch(`${API_BASE_URL}/search?${params}`);
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
 
     const data: SearchResponse = await response.json();
-    return data.results.map((product, index) => mapBackendProduct(product, index));
+
+    return {
+      products: data.results.map((product, index) => mapBackendProduct(product, (page - 1) * limit + index)),
+      total: data.total,
+      page: data.page,
+      pages: data.pages,
+      sort,
+      limit,
+    };
   } catch (error) {
     console.error('Failed to fetch products:', error);
     throw error;
