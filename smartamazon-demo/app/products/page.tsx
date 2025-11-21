@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { getProducts } from '@/lib/initializeProducts';
 import { Product, FilterState } from '@/lib/types';
+import { parseNaturalLanguageQuery, getParsedQuerySummary, ParsedQuery } from '@/lib/nluSearch';
 import { ProductCard } from '@/components/ProductCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
 import { ComparisonPanel } from '@/components/ComparisonPanel';
@@ -10,7 +11,9 @@ import { ComparisonPanel } from '@/components/ComparisonPanel';
 export default function ProductsPage() {
   const allProducts = getProducts();
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [parsedQuery, setParsedQuery] = useState<ParsedQuery | null>(null);
+  const [nluSummary, setNluSummary] = useState('');
   const [filters, setFilters] = useState<FilterState>({
     minPrice: 0,
     maxPrice: 1000,
@@ -22,10 +25,51 @@ export default function ProductsPage() {
   });
   const [comparisonIds, setComparisonIds] = useState<number[]>([]);
 
-  // Filter products based on search and filters
+  // Handle search submission with NLU parsing
+  const handleSearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      setParsedQuery(null);
+      setNluSummary('');
+      return;
+    }
+
+    const parsed = parseNaturalLanguageQuery(query);
+    setParsedQuery(parsed);
+    setNluSummary(getParsedQuerySummary(parsed));
+
+    // Auto-apply filters from NLU
+    setFilters(prev => ({
+      ...prev,
+      minPrice: parsed.minPrice ?? prev.minPrice,
+      maxPrice: parsed.maxPrice ?? prev.maxPrice,
+      selectedCategories: parsed.categories ?? prev.selectedCategories,
+      showSponsored: parsed.excludeSponsored ? false : prev.showSponsored,
+      primeOnly: parsed.requirePrime ?? prev.primeOnly,
+      minRating: parsed.minRating ?? prev.minRating,
+    }));
+  }, []);
+
+  // Clear NLU filters
+  const clearNluFilters = useCallback(() => {
+    setParsedQuery(null);
+    setNluSummary('');
+    setSearchInput('');
+    setFilters({
+      minPrice: 0,
+      maxPrice: 1000,
+      selectedCategories: [],
+      showSponsored: true,
+      primeOnly: false,
+      bestValueOnly: false,
+      minRating: 0
+    });
+  }, []);
+
+  // Filter and sort products based on search, filters, and NLU parsed query
   const filteredProducts = useMemo(() => {
-    return allProducts.filter(product => {
-      // Search filter
+    let results = allProducts.filter(product => {
+      // Text search filter
+      const searchTerm = parsedQuery?.searchTerm || searchInput;
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
         searchTerm === '' ||
@@ -68,9 +112,57 @@ export default function ProductsPage() {
         return false;
       }
 
+      // NLU-specific filters
+      if (parsedQuery) {
+        // Brand filter
+        if (parsedQuery.brand && !product.brand.toLowerCase().includes(parsedQuery.brand.toLowerCase())) {
+          return false;
+        }
+
+        // Top Deal filter
+        if (parsedQuery.requireTopDeal && product.dealLabel?.text !== 'TOP DEAL') {
+          return false;
+        }
+
+        // Hidden Gem filter
+        if (parsedQuery.requireHiddenGem && product.dealLabel?.text !== 'HIDDEN GEM') {
+          return false;
+        }
+
+        // Good Value filter
+        if (parsedQuery.requireGoodValue && product.dealLabel?.text !== 'GOOD VALUE') {
+          return false;
+        }
+
+        // Bulk savings preference (boost, not filter)
+        // This will be handled in sorting
+      }
+
       return true;
     });
-  }, [allProducts, searchTerm, filters]);
+
+    // Apply NLU-based sorting
+    if (parsedQuery) {
+      if (parsedQuery.sortCheapest) {
+        results = results.sort((a, b) => a.currentPrice - b.currentPrice);
+      } else if (parsedQuery.sortHighestRated) {
+        results = results.sort((a, b) => b.rating - a.rating);
+      } else if (parsedQuery.preferDealScore || parsedQuery.requireTopDeal) {
+        results = results.sort((a, b) => b.dealScore - a.dealScore);
+      } else if (parsedQuery.preferBulkSavings) {
+        // Sort bulk savings products first
+        results = results.sort((a, b) => {
+          if (a.isMultiPack && !b.isMultiPack) return -1;
+          if (!a.isMultiPack && b.isMultiPack) return 1;
+          const aPercent = parseFloat(a.bulkSavingsPercent || '0');
+          const bPercent = parseFloat(b.bulkSavingsPercent || '0');
+          return bPercent - aPercent;
+        });
+      }
+    }
+
+    return results;
+  }, [allProducts, searchInput, filters, parsedQuery]);
 
   // Get products for comparison
   const comparisonProducts = useMemo(() => {
@@ -125,19 +217,43 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar with NLU */}
           <div className="relative">
             <input
               type="text"
-              placeholder="Search by product name, brand, or category..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none shadow-sm"
+              placeholder='Try: "best protein under $40" or "hidden gem electronics"'
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchInput)}
+              className="w-full px-6 py-4 pr-24 text-lg border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none shadow-sm"
             />
-            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-2xl">
-              🔍
-            </span>
+            <button
+              onClick={() => handleSearch(searchInput)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+            >
+              🔍 Search
+            </button>
           </div>
+
+          {/* NLU Summary Banner */}
+          {nluSummary && (
+            <div className="mt-4 p-4 bg-purple-100 border-2 border-purple-300 rounded-xl flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-purple-800 mb-1">
+                  🧠 Smart Search Applied:
+                </div>
+                <div className="text-sm text-purple-700">
+                  {nluSummary}
+                </div>
+              </div>
+              <button
+                onClick={clearNluFilters}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Main Content */}
