@@ -2200,24 +2200,56 @@ LAST UPDATED: 2024-11-21
             }
         ];
 
-        // Calculate bulk savings for multi-pack products
+        /**
+         * ============================================================================
+         * BULK SAVINGS CALCULATION FUNCTION
+         * ============================================================================
+         *
+         * Automatically calculates bulk savings for multi-pack products by comparing
+         * the multi-pack price to the total cost of buying items individually.
+         *
+         * Multi-Pack Product Structure:
+         * - isMultiPack: Boolean flag identifying products sold in multi-packs
+         * - packSize: Number of units in the pack (e.g., 250 for vitamin bottles)
+         * - singleUnitPrice: Price per individual unit if bought separately (e.g., $0.08)
+         * - currentPrice: Current price of the entire multi-pack (e.g., $12.74)
+         *
+         * Calculated Fields:
+         * - pricePerUnit: Current price ÷ pack size (what you pay per unit in bulk)
+         * - bulkSavings: Dollar amount saved by buying the multi-pack (e.g., $7.26)
+         * - bulkSavingsPercent: Percentage saved vs individual purchases (e.g., 36.3%)
+         *
+         * Formula:
+         * Individual Total = packSize × singleUnitPrice
+         * Bulk Savings = Individual Total - currentPrice
+         * Savings Percent = (Bulk Savings ÷ Individual Total) × 100
+         *
+         * Example: Nature Made Vitamin D3 (250 count)
+         * - Pack Size: 250 units
+         * - Single Unit Price: $0.08
+         * - Current Pack Price: $12.74
+         * - Individual Total: 250 × $0.08 = $20.00
+         * - Bulk Savings: $20.00 - $12.74 = $7.26
+         * - Savings Percent: ($7.26 ÷ $20.00) × 100 = 36.3%
+         */
         function calculateBulkSavings() {
             mockProducts.forEach(product => {
+                // Only process products marked as multi-packs with required fields
                 if (product.isMultiPack && product.packSize && product.singleUnitPrice) {
                     // Calculate total cost if buying individually
                     const individualTotal = product.packSize * product.singleUnitPrice;
 
-                    // Calculate savings (dollar amount)
+                    // Calculate dollar savings from buying in bulk
                     const savings = individualTotal - product.currentPrice;
 
-                    // Calculate savings percentage
+                    // Calculate percentage savings (rounded to 1 decimal for display)
                     const savingsPercent = (savings / individualTotal) * 100;
 
-                    // Update product with calculated values (rounded appropriately)
-                    product.bulkSavings = parseFloat(savings.toFixed(2));
-                    product.bulkSavingsPercent = parseFloat(savingsPercent.toFixed(1));
+                    // Update product with calculated values
+                    product.bulkSavings = parseFloat(savings.toFixed(2));              // e.g., 7.26
+                    product.bulkSavingsPercent = parseFloat(savingsPercent.toFixed(1)); // e.g., 36.3
 
-                    // Also calculate pricePerUnit if not already set
+                    // Calculate price per unit in the bulk pack if not already set
                     if (!product.pricePerUnit) {
                         product.pricePerUnit = parseFloat((product.currentPrice / product.packSize).toFixed(2));
                     }
@@ -2225,7 +2257,8 @@ LAST UPDATED: 2024-11-21
             });
         }
 
-        // Apply bulk savings calculations
+        // Apply bulk savings calculations to all multi-pack products
+        // This runs once after product data is loaded
         calculateBulkSavings();
 
         // Generate Price History for all products (last 6 months)
@@ -2522,11 +2555,17 @@ LAST UPDATED: 2024-11-21
                         <div style="font-size: 0.85rem; color: #51cf66; font-weight: 600;">
                             You save: $${(product.listPrice - product.currentPrice).toFixed(2)} (${product.discount}%)
                         </div>
+
+                        <!-- BULK SAVINGS BADGE: Displays prominent savings badge for multi-pack products -->
+                        <!-- Only shown when isMultiPack=true AND bulkSavingsPercent > 0 -->
+                        <!-- Uses green gradient background to stand out and match savings theme -->
+                        <!-- Shows percentage rounded to 1 decimal place (e.g., 36.3%) -->
                         ${product.isMultiPack && product.bulkSavingsPercent > 0 ? `
                             <div style="background: linear-gradient(135deg, #51cf66 0%, #2ecc71 100%); color: white; padding: 8px 12px; border-radius: 6px; margin-top: 8px; font-weight: 700; font-size: 0.9rem; text-align: center; box-shadow: 0 2px 6px rgba(81, 207, 102, 0.3);">
                                 🎉 BULK SAVINGS: ${product.bulkSavingsPercent.toFixed(1)}%
                             </div>
                         ` : ''}
+
                         <div style="font-size: 0.8rem; color: #666; margin-top: 3px;">
                             Weight: ${product.weight}
                         </div>
@@ -3051,6 +3090,24 @@ LAST UPDATED: 2024-11-21
                         </div>
                     </div>
 
+                    <!-- ============================================================================ -->
+                    <!-- COMPARISON PANEL: BULK SAVINGS SECTION                                     -->
+                    <!-- ============================================================================ -->
+                    <!-- This section appears in the side-by-side product comparison panel          -->
+                    <!-- Only displayed for multi-pack products with positive bulk savings          -->
+                    <!--                                                                             -->
+                    <!-- Display Condition: isMultiPack=true AND bulkSavingsPercent > 0             -->
+                    <!--                                                                             -->
+                    <!-- Layout Structure:                                                           -->
+                    <!-- - Prominent header with savings percentage                                  -->
+                    <!-- - 2-column grid showing 4 key metrics:                                      -->
+                    <!--   1. Pack Size: Number of units in the multi-pack (e.g., 250 units)        -->
+                    <!--   2. Price Per Unit: Cost per unit in bulk pack (e.g., $0.05)              -->
+                    <!--   3. Single Unit Price: Cost if buying individually (e.g., $0.08)          -->
+                    <!--   4. Total Savings: Dollar amount saved by buying bulk (e.g., $7.26)       -->
+                    <!--                                                                             -->
+                    <!-- Styling matches product card badges (green gradient, white text)           -->
+                    <!-- ============================================================================ -->
                     ${product.isMultiPack && product.bulkSavingsPercent > 0 ? `
                         <div style="background: linear-gradient(135deg, #51cf66 0%, #2ecc71 100%); color: white; padding: 12px 16px; border-radius: 8px; margin: 15px 0; box-shadow: 0 3px 10px rgba(81, 207, 102, 0.3);">
                             <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; text-align: center;">
