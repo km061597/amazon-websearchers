@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { Product } from '@/lib/types';
 import { TrackPriceButton } from '@/components/PriceAlerts';
+import { PriceChart } from '@/components/PriceChart';
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, isSelected, onToggleComparison, isTracking = false, onToggleTracking }: ProductCardProps) {
+  const [showPriceHistory, setShowPriceHistory] = useState(false);
+
   return (
     <div
       className={`
@@ -167,7 +170,7 @@ export function ProductCard({ product, isSelected, onToggleComparison, isTrackin
 
       {/* Bulk Savings Details */}
       {product.isMultiPack && (
-        <div className="bg-orange-50 border-l-4 border-orange-500 p-3 rounded-lg">
+        <div className="bg-orange-50 border-l-4 border-orange-500 p-3 rounded-lg mb-4">
           <div className="text-sm font-bold text-orange-600 mb-2">
             💰 Bulk Savings
           </div>
@@ -185,6 +188,91 @@ export function ProductCard({ product, isSelected, onToggleComparison, isTrackin
           </div>
         </div>
       )}
+
+      {/* Price History Section - Expandable */}
+      <div className="mb-4">
+        {/* Price History Toggle Button */}
+        <button
+          onClick={() => setShowPriceHistory(!showPriceHistory)}
+          className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-between ${
+            showPriceHistory
+              ? 'bg-gradient-to-r from-purple-600 to-purple-800 text-white'
+              : 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 hover:from-purple-200 hover:to-purple-300'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-lg">{showPriceHistory ? '📊' : '📈'}</span>
+            <span>
+              {showPriceHistory ? 'Hide' : 'Show'} Price History
+            </span>
+          </span>
+          <span className="text-lg transition-transform duration-300" style={{ transform: showPriceHistory ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            ▼
+          </span>
+        </button>
+
+        {/* Expandable Price History Content */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            showPriceHistory ? 'max-h-[600px] opacity-100 mt-3' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="bg-gradient-to-br from-purple-50 to-white border-2 border-purple-200 rounded-lg p-4">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="text-center bg-white p-2 rounded-lg shadow-sm border border-purple-100">
+                <div className="text-xs text-gray-600 mb-1">30-Day Low</div>
+                <div className="text-sm font-bold text-green-600">
+                  ${product.lowestHistoricalPrice.toFixed(2)}
+                </div>
+              </div>
+              <div className="text-center bg-white p-2 rounded-lg shadow-sm border border-purple-100">
+                <div className="text-xs text-gray-600 mb-1">30-Day Avg</div>
+                <div className="text-sm font-bold text-purple-600">
+                  ${product.averageHistoricalPrice.toFixed(2)}
+                </div>
+              </div>
+              <div className="text-center bg-white p-2 rounded-lg shadow-sm border border-purple-100">
+                <div className="text-xs text-gray-600 mb-1">30-Day High</div>
+                <div className="text-sm font-bold text-red-600">
+                  ${product.highestHistoricalPrice.toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            {/* Price Chart */}
+            <div className="bg-white rounded-lg p-3 shadow-sm">
+              <PriceChart product={product} height={220} showTitle={true} showLegend={true} />
+            </div>
+
+            {/* Price Insights */}
+            <div className="mt-3 space-y-2">
+              {product.currentPrice === product.lowestHistoricalPrice && (
+                <div className="bg-green-100 border-l-4 border-green-500 p-2 rounded text-xs">
+                  <span className="font-bold text-green-700">🎉 Lowest price in 30 days!</span>
+                  <span className="text-green-600"> Great time to buy.</span>
+                </div>
+              )}
+              {product.currentPrice < product.averageHistoricalPrice && product.currentPrice !== product.lowestHistoricalPrice && (
+                <div className="bg-blue-100 border-l-4 border-blue-500 p-2 rounded text-xs">
+                  <span className="font-bold text-blue-700">💰 Below average price!</span>
+                  <span className="text-blue-600">
+                    {' '}Saving ${(product.averageHistoricalPrice - product.currentPrice).toFixed(2)} vs 30-day avg.
+                  </span>
+                </div>
+              )}
+              {product.currentPrice > product.averageHistoricalPrice && (
+                <div className="bg-orange-100 border-l-4 border-orange-500 p-2 rounded text-xs">
+                  <span className="font-bold text-orange-700">📊 Above average price</span>
+                  <span className="text-orange-600">
+                    {' '}Consider tracking for price drops.
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Track Price Button */}
       {onToggleTracking && (
