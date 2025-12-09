@@ -2200,6 +2200,34 @@ LAST UPDATED: 2024-11-21
             }
         ];
 
+        // Calculate bulk savings for multi-pack products
+        function calculateBulkSavings() {
+            mockProducts.forEach(product => {
+                if (product.isMultiPack && product.packSize && product.singleUnitPrice) {
+                    // Calculate total cost if buying individually
+                    const individualTotal = product.packSize * product.singleUnitPrice;
+
+                    // Calculate savings (dollar amount)
+                    const savings = individualTotal - product.currentPrice;
+
+                    // Calculate savings percentage
+                    const savingsPercent = (savings / individualTotal) * 100;
+
+                    // Update product with calculated values (rounded appropriately)
+                    product.bulkSavings = parseFloat(savings.toFixed(2));
+                    product.bulkSavingsPercent = parseFloat(savingsPercent.toFixed(1));
+
+                    // Also calculate pricePerUnit if not already set
+                    if (!product.pricePerUnit) {
+                        product.pricePerUnit = parseFloat((product.currentPrice / product.packSize).toFixed(2));
+                    }
+                }
+            });
+        }
+
+        // Apply bulk savings calculations
+        calculateBulkSavings();
+
         // Generate Price History for all products (last 6 months)
         function generatePriceHistory(currentPrice, listPrice) {
             const monthNames = ["Jun 2024", "Jul 2024", "Aug 2024", "Sep 2024", "Oct 2024", "Nov 2024"];
