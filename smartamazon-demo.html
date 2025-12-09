@@ -2522,6 +2522,11 @@ LAST UPDATED: 2024-11-21
                         <div style="font-size: 0.85rem; color: #51cf66; font-weight: 600;">
                             You save: $${(product.listPrice - product.currentPrice).toFixed(2)} (${product.discount}%)
                         </div>
+                        ${product.isMultiPack && product.bulkSavingsPercent > 0 ? `
+                            <div style="background: linear-gradient(135deg, #51cf66 0%, #2ecc71 100%); color: white; padding: 8px 12px; border-radius: 6px; margin-top: 8px; font-weight: 700; font-size: 0.9rem; text-align: center; box-shadow: 0 2px 6px rgba(81, 207, 102, 0.3);">
+                                🎉 BULK SAVINGS: ${product.bulkSavingsPercent.toFixed(1)}%
+                            </div>
+                        ` : ''}
                         <div style="font-size: 0.8rem; color: #666; margin-top: 3px;">
                             Weight: ${product.weight}
                         </div>
@@ -2535,7 +2540,7 @@ LAST UPDATED: 2024-11-21
                         ${product.discount > 20 ? `<span class="badge badge-discount">${product.discount}% OFF</span>` : ''}
                         ${product.hiddenGemScore >= 85 ? '<span class="badge badge-gem">💎 Hidden Gem</span>' : ''}
                         ${product.isSponsored ? '<span class="badge badge-sponsored">Sponsored</span>' : ''}
-                        ${product.isMultiPack ? `<span class="badge badge-bulk" style="background: #ff9800; color: white;">📦 BULK: Save ${product.bulkSavingsPercent}%</span>` : ''}
+                        ${product.isMultiPack && product.bulkSavingsPercent > 0 ? `<span class="badge badge-bulk" style="background: #2ecc71; color: white; font-weight: 600;">📦 Multi-Pack</span>` : ''}
                     </div>
 
                     <div class="rating">
