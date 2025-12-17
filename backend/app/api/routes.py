@@ -164,6 +164,14 @@ async def search_products(
 
     # Convert to response format and add computed fields
     product_responses = []
+
+    # Determine the best unit price in the current result set (ignoring nulls)
+    min_unit_price = None
+    if results:
+        unit_prices = [p.unit_price for p in results if p.unit_price is not None]
+        if unit_prices:
+            min_unit_price = min(unit_prices)
+
     for product in results:
         response = ProductResponse.from_orm(product)
 
@@ -175,7 +183,11 @@ async def search_products(
                 response.savings_vs_category = Decimal(str(round(savings, 2)))
 
         # Check if best value
-        response.is_best_value = (product.unit_price == results[0].unit_price if results else False)
+        response.is_best_value = (
+            min_unit_price is not None
+            and product.unit_price is not None
+            and product.unit_price == min_unit_price
+        )
 
         product_responses.append(response)
 

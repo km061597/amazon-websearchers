@@ -2,7 +2,10 @@
 API endpoint tests for SmartAmazon
 """
 import pytest
+from decimal import Decimal
 from fastapi.testclient import TestClient
+
+from app.models import Product
 
 
 class TestSearchEndpoint:
@@ -67,6 +70,37 @@ class TestSearchEndpoint:
         if len(results) > 1:
             unit_prices = [float(p["unit_price"]) for p in results if p["unit_price"]]
             assert unit_prices == sorted(unit_prices)
+
+    def test_search_marks_best_value_when_sorted_differently(self, client, db_session, sample_products):
+        """Ensure best value uses lowest unit price regardless of sort order"""
+        premium_product = Product(
+            asin="TESTPREMIUM",
+            title="Premium Protein Powder",
+            brand="PremiumBrand",
+            category="Protein Powder",
+            current_price=Decimal("89.99"),
+            list_price=Decimal("99.99"),
+            unit_price=Decimal("1.50"),
+            unit_type="oz",
+            quantity=Decimal("60"),
+            discount_pct=Decimal("10.0"),
+            rating=Decimal("5.0"),
+            review_count=200,
+            is_prime=True,
+            is_sponsored=False,
+            in_stock=True,
+        )
+        db_session.add(premium_product)
+        db_session.commit()
+
+        response = client.get("/api/search", params={"q": "protein", "sort": "rating_desc"})
+        assert response.status_code == 200
+
+        data = response.json()
+        best_value_asins = [p["asin"] for p in data["results"] if p.get("is_best_value")]
+
+        assert "TEST001" in best_value_asins  # Lowest unit price among results
+        assert "TESTPREMIUM" not in best_value_asins
 
     def test_search_pagination(self, client, sample_products):
         """Test pagination"""
