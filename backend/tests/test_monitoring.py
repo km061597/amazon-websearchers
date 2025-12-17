@@ -32,7 +32,7 @@ class TestSystemMetricsCollection:
         collect_system_metrics()
 
         # Verify metrics were called
-        assert mock_cpu.called
+        mock_cpu.assert_called_once_with(interval=None)
         assert mock_memory.called
 
     @patch('app.monitoring.psutil.cpu_percent')
@@ -470,7 +470,7 @@ class TestPrometheusMetrics:
         from app.monitoring import http_requests_total
 
         assert http_requests_total is not None
-        assert http_requests_total._name == 'http_requests_total'
+        assert http_requests_total._name == 'http_requests'
 
     def test_http_request_duration_exists(self):
         """Test that http_request_duration_seconds metric exists"""
@@ -491,14 +491,14 @@ class TestPrometheusMetrics:
         from app.monitoring import database_queries_total
 
         assert database_queries_total is not None
-        assert database_queries_total._name == 'database_queries_total'
+        assert database_queries_total._name == 'database_queries'
 
     def test_cache_operations_total_exists(self):
         """Test that cache_operations_total metric exists"""
         from app.monitoring import cache_operations_total
 
         assert cache_operations_total is not None
-        assert cache_operations_total._name == 'cache_operations_total'
+        assert cache_operations_total._name == 'cache_operations'
 
     def test_system_cpu_usage_exists(self):
         """Test that system_cpu_usage metric exists"""

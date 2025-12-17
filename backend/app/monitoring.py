@@ -12,6 +12,8 @@ import psutil
 import os
 
 from .logging_config import get_logger
+from .cache import get_cache
+from .database import SessionLocal
 
 
 logger = get_logger(__name__)
@@ -133,8 +135,8 @@ def collect_system_metrics():
     Collect system-level metrics
     """
     try:
-        # CPU usage
-        cpu_percent = psutil.cpu_percent(interval=1)
+        # CPU usage (non-blocking sample to avoid delaying metrics endpoint)
+        cpu_percent = psutil.cpu_percent(interval=None)
         system_cpu_usage.set(cpu_percent)
 
         # Memory usage
@@ -306,9 +308,6 @@ class HealthCheck:
         Returns:
             Complete health check results
         """
-        from .cache import get_cache
-        from .database import SessionLocal
-
         db = SessionLocal()
         cache = get_cache()
 
